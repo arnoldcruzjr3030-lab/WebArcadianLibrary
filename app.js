@@ -54,6 +54,7 @@ const googleProvider = new GoogleAuthProvider();
 const booksCollection = collection(db, "books");
 const usersCollection = collection(db, "users");
 const borrowedCollection = collection(db, "borrowed_books");
+const bookmarksCollection = collection(db, "bookmarks");
 
 // Page Identifier
 const path = window.location.pathname;
@@ -147,16 +148,24 @@ const editStudentIdInput = document.getElementById("edit-student-id-input");
 const saveStudentIdBtn = document.getElementById("save-student-id-btn");
 const idUpdateAlert = document.getElementById("id-update-alert");
 
+// Bookmark / Favorite DOM elements
+const myBookmarksTbody = document.getElementById("my-bookmarks-tbody");
+const bookmarkCountBadge = document.getElementById("bookmark-count-badge");
+const profileBookmarksTbody = document.getElementById("profile-bookmarks-tbody");
+const profileBookmarkCountBadge = document.getElementById("profile-bookmark-count-badge");
+
 let allBooks = [];
 let activeStudentRecords = [];
 let cancelledStudentRecords = [];
 let studentActiveBorrowedMap = new Map();
 let studentBorrowRecordMap = new Map();
+let studentBookmarkedMap = new Map(); // bookId -> bookmarkDocId
 let isSignUpMode = false;
 let unsubscribeSnapshot = null;
 let unsubscribeBorrowedSnapshot = null;
 let unsubscribePendingSnapshot = null;
 let unsubscribeAllRecordsSnapshot = null;
+let unsubscribeBookmarksSnapshot = null;
 let currentUserRole = "student";
 let currentUserApproved = false;
 let activeCategoryFilter = "ALL";
@@ -237,6 +246,108 @@ window.closeSummaryModal = () => {
   const modal = document.getElementById("summary-modal");
   if (modal) modal.classList.add("hidden");
 };
+
+// Toggle Bookmark / Favorite Action
+window.handleToggleBookmark = async (bookId) => {
+  if (!auth.currentUser) {
+    alert("Please sign in or register to bookmark favorite books.");
+    window.location.href = "login.html";
+    return;
+  }
+
+  const user = auth.currentUser;
+  const existingBookmarkId = studentBookmarkedMap.get(bookId);
+
+  try {
+    if (existingBookmarkId) {
+      await deleteDoc(doc(db, "bookmarks", existingBookmarkId));
+      studentBookmarkedMap.delete(bookId);
+    } else {
+      const book = allBooks.find(b => b.id === bookId);
+      if (!book) return;
+
+      const docRef = await addDoc(bookmarksCollection, {
+        userId: user.uid,
+        bookId: bookId,
+        bookTitle: book.title,
+        bookAuthor: book.author,
+        category: book.category || "General",
+        coverUrl: book.coverUrl || "",
+        createdAt: new Date()
+      });
+      studentBookmarkedMap.set(bookId, docRef.id);
+    }
+
+    renderTopBooks(allBooks);
+    renderBookTable(allBooks);
+  } catch (err) {
+    alert("Failed to update bookmark: " + err.message);
+  }
+};
+
+// Real-time Bookmark Listener
+function listenToUserBookmarks(userId) {
+  if (unsubscribeBookmarksSnapshot) unsubscribeBookmarksSnapshot();
+
+  const q = query(bookmarksCollection, where("userId", "==", userId));
+
+  unsubscribeBookmarksSnapshot = onSnapshot(q, (snapshot) => {
+    const bookmarkedList = [];
+    studentBookmarkedMap.clear();
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      bookmarkedList.push({ id: docSnap.id, ...data });
+      studentBookmarkedMap.set(data.bookId, docSnap.id);
+    });
+
+    if (bookmarkCountBadge) bookmarkCountBadge.textContent = `${bookmarkedList.length} Saved`;
+    if (profileBookmarkCountBadge) profileBookmarkCountBadge.textContent = `${bookmarkedList.length} Saved`;
+
+    renderBookmarksTable(bookmarkedList, myBookmarksTbody);
+    renderBookmarksTable(bookmarkedList, profileBookmarksTbody);
+    renderBookTable(allBooks);
+    renderTopBooks(allBooks);
+  });
+}
+
+function renderBookmarksTable(bookmarks, targetTbody) {
+  if (!targetTbody) return;
+
+  if (bookmarks.length === 0) {
+    targetTbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-medium">No bookmarked or favorite books yet. Click the heart icon on any book to save it!</td></tr>`;
+    return;
+  }
+
+  targetTbody.innerHTML = bookmarks.map((item) => {
+    return `
+      <tr class="hover:bg-slate-50 transition">
+        <td class="py-3 px-4">
+          <div class="flex items-center gap-3">
+            ${renderBookCoverHTML(item.coverUrl, item.bookTitle, item.category, "w-10 h-14")}
+            <div>
+              <div class="font-bold text-slate-900">${escapeHtml(item.bookTitle)}</div>
+              <div class="text-[11px] text-slate-500 font-medium">by ${escapeHtml(item.bookAuthor)}</div>
+            </div>
+          </div>
+        </td>
+        <td class="py-3 px-3 text-center">
+          <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">${escapeHtml(item.category || 'General')}</span>
+        </td>
+        <td class="py-3 px-3 text-center text-slate-500 font-medium">
+          ${item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+        </td>
+        <td class="py-3 px-4 text-center">
+          <div class="flex items-center justify-center gap-2">
+            <button onclick="handleToggleBookmark('${item.bookId}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition">
+              <i class="fa-solid fa-heart-crack mr-1"></i> Remove
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
 
 // CSV Export Handler
 window.exportBorrowingRecordsToCSV = () => {
@@ -1070,8 +1181,9 @@ onAuthStateChanged(auth, async (user) => {
       }
     }
 
-    // Always track user borrowing states on student pages or home page
+    // Always track user borrowing states & bookmarks
     listenToStudentBorrowedBooks(user.uid);
+    listenToUserBookmarks(user.uid);
 
     if (isProfilePage) {
       loadStudentProfileDetails(user);
@@ -1081,6 +1193,7 @@ onAuthStateChanged(auth, async (user) => {
     currentUserApproved = false;
     studentActiveBorrowedMap.clear();
     studentBorrowRecordMap.clear();
+    studentBookmarkedMap.clear();
     
     if (isAdminPage || isStudentPage || isProfilePage) {
       window.location.href = "login.html";
@@ -1429,6 +1542,7 @@ function renderTopBooks(books) {
   topBooksContainer.innerHTML = topBooks.map((book) => {
     const isAvailable = book.available > 0;
     const borrowedCount = (book.copies || 1) - (book.available || 0);
+    const isBookmarked = studentBookmarkedMap.has(book.id);
 
     return `
       <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between hover:shadow-md transition">
@@ -1437,9 +1551,14 @@ function renderTopBooks(books) {
             <span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
               ${escapeHtml(book.category || 'General')}
             </span>
-            <span class="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
-              <i class="fa-solid fa-fire"></i> ${borrowedCount} borrowed
-            </span>
+            <div class="flex items-center gap-2">
+              <button onclick="handleToggleBookmark('${book.id}')" class="text-xs p-1.5 rounded-lg transition ${isBookmarked ? 'text-red-600 bg-red-50' : 'text-slate-400 hover:text-red-500 bg-slate-50'}" title="${isBookmarked ? 'Remove Bookmark' : 'Bookmark Book'}">
+                <i class="${isBookmarked ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+              </button>
+              <span class="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
+                <i class="fa-solid fa-fire"></i> ${borrowedCount} borrowed
+              </span>
+            </div>
           </div>
 
           <div class="flex gap-3 mb-3">
@@ -1521,6 +1640,7 @@ function renderBookTable(books) {
     const isAvailable = book.available > 0;
     const requestStatus = studentActiveBorrowedMap.get(book.id);
     const activeBorrowRecordId = studentBorrowRecordMap.get(book.id) || "";
+    const isBookmarked = studentBookmarkedMap.has(book.id);
 
     return `
       <tr class="hover:bg-slate-50 transition">
@@ -1528,7 +1648,14 @@ function renderBookTable(books) {
           <div class="flex items-center gap-3">
             ${renderBookCoverHTML(book.coverUrl, book.title, book.category, "w-10 h-14")}
             <div>
-              <div class="font-bold text-slate-900 text-xs sm:text-sm">${escapeHtml(book.title)}</div>
+              <div class="flex items-center gap-2">
+                <div class="font-bold text-slate-900 text-xs sm:text-sm">${escapeHtml(book.title)}</div>
+                ${!isAdmin ? `
+                  <button onclick="handleToggleBookmark('${book.id}')" class="text-xs p-1 rounded transition ${isBookmarked ? 'text-red-600 bg-red-50' : 'text-slate-300 hover:text-red-500'}" title="${isBookmarked ? 'Remove Bookmark' : 'Bookmark Book'}">
+                    <i class="${isBookmarked ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                  </button>
+                ` : ''}
+              </div>
               <div class="text-[11px] text-slate-500 font-medium">by ${escapeHtml(book.author)} ${book.isbn ? `• ISBN: ${escapeHtml(book.isbn)}` : ''}</div>
               <button onclick="openSummaryModal('${escapeHtml(book.title)}', '${escapeHtml(book.author)}', '${escapeHtml(book.summary)}', '${escapeHtml(book.category)}', '${escapeHtml(book.coverUrl)}')" class="mt-1 text-[10px] text-indigo-600 hover:underline font-bold inline-flex items-center gap-1">
                 <i class="fa-solid fa-align-left"></i> Read Description & Summary
