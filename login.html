@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css" />
 </head>
-<body class="bg-slate-900 font-sans min-h-screen text-slate-100 flex flex-col justify-between items-center p-4">
+<body class="bg-slate-900 font-sans min-h-screen text-slate-100 flex flex-col justify-between items-center p-4 selection:bg-indigo-500 selection:text-white">
 
   <!-- Header Branding -->
   <div class="w-full max-w-md flex justify-between items-center py-4">
@@ -29,7 +29,7 @@
   </div>
 
   <!-- Authentication Card -->
-  <div class="w-full max-w-md bg-slate-800 border border-slate-700/80 rounded-3xl p-8 shadow-2xl space-y-6">
+  <div class="w-full max-w-md bg-slate-800 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
     <div class="text-center space-y-1">
       <h2 id="auth-title" class="text-2xl font-bold text-white tracking-tight">Welcome Back</h2>
       <p id="auth-subtitle" class="text-xs text-slate-400">Sign in to access Arcadian Library Portal</p>
@@ -38,13 +38,13 @@
     <!-- Error Alert Box -->
     <div id="auth-error" class="hidden p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold rounded-xl text-center"></div>
 
-    <form id="auth-form" class="space-y-4">
+    <form id="auth-form" method="POST" action="#" class="space-y-4">
       
       <!-- Student ID Field (Visible during Sign Up) -->
       <div id="student-id-container" class="hidden">
         <label class="block text-xs font-bold text-slate-300 mb-1.5">Student ID Number *</label>
         <div class="relative">
-          <input type="text" id="auth-student-id" placeholder="e.g. 2026-10492" class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
+          <input type="text" id="auth-student-id" name="student_id" autocomplete="off" placeholder="e.g. 2026-10492" class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
           <i class="fa-solid fa-id-card absolute left-3.5 top-3 text-slate-500 text-xs"></i>
         </div>
       </div>
@@ -53,7 +53,7 @@
       <div>
         <label class="block text-xs font-bold text-slate-300 mb-1.5">Email Address *</label>
         <div class="relative">
-          <input type="email" id="auth-email" required placeholder="student@school.edu" class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
+          <input type="email" id="auth-email" name="email" autocomplete="username" required placeholder="student@school.edu" class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
           <i class="fa-solid fa-envelope absolute left-3.5 top-3 text-slate-500 text-xs"></i>
         </div>
       </div>
@@ -67,18 +67,18 @@
           </button>
         </div>
         <div class="relative">
-          <input type="password" id="auth-password" required placeholder="••••••••" class="w-full pl-10 pr-11 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
+          <input type="password" id="auth-password" name="password" autocomplete="current-password" required placeholder="••••••••" class="w-full pl-10 pr-11 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
           <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-500 text-xs"></i>
           
           <!-- Toggle Password Visibility Eye Button -->
-          <button type="button" id="toggle-password-visibility" class="absolute right-3.5 top-2.5 text-slate-400 hover:text-slate-200 text-xs p-0.5 focus:outline-none transition" title="Toggle password visibility">
+          <button type="button" id="toggle-password-visibility" class="absolute right-3.5 top-2.5 text-slate-400 hover:text-slate-200 text-xs p-1 focus:outline-none transition" title="Toggle password visibility">
             <i id="password-eye-icon" class="fa-solid fa-eye"></i>
           </button>
         </div>
       </div>
 
       <!-- Form Submit Button -->
-      <button type="submit" id="auth-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-3 rounded-xl shadow-lg transition duration-150">
+      <button type="submit" id="auth-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-3 rounded-xl shadow-lg transition duration-150 min-h-[44px] active:scale-[0.99]">
         Sign In
       </button>
 
@@ -91,13 +91,13 @@
     </div>
 
     <!-- Google Sign-In Button -->
-    <button id="google-signin-btn" type="button" class="w-full bg-slate-900 hover:bg-slate-950 text-slate-200 border border-slate-700 font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+    <button id="google-signin-btn" type="button" class="w-full bg-slate-900 hover:bg-slate-950 text-slate-200 border border-slate-700 font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-2 min-h-[44px] active:scale-[0.99]">
       <i class="fa-brands fa-google text-red-400 text-sm"></i> Continue with Google
     </button>
 
     <!-- Sign In / Sign Up Mode Switcher -->
     <div class="text-center pt-2">
-      <button type="button" id="toggle-auth-mode" class="text-xs text-slate-400 hover:text-indigo-400 font-semibold transition">
+      <button type="button" id="toggle-auth-mode" class="text-xs text-slate-400 hover:text-indigo-400 font-semibold transition py-1">
         Don't have an account? Sign Up
       </button>
     </div>
