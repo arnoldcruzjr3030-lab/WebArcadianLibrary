@@ -103,6 +103,7 @@ const quickAddCatBtn = document.getElementById("quick-add-cat-btn");
 const quickAddSubCatBtn = document.getElementById("quick-add-subcat-btn");
 const quickRemoveSubCatBtn = document.getElementById("quick-remove-subcat-btn");
 const categoryManagerList = document.getElementById("category-manager-list");
+const subCategoryManagerList = document.getElementById("subcategory-manager-list");
 const copiesInput = document.getElementById("copies");
 const availableInput = document.getElementById("available");
 
@@ -1524,13 +1525,19 @@ function switchAdminTab(targetTab) {
 
 function renderCategoryPills(books) {
   const genresSet = new Set();
+  const subGenresSet = new Set();
+
   books.forEach(b => {
     if (b.category && b.category.trim() !== "") {
       genresSet.add(b.category.trim());
     }
+    if (b.subCategory && b.subCategory.trim() !== "") {
+      subGenresSet.add(b.subCategory.trim());
+    }
   });
 
   const uniqueGenres = Array.from(genresSet).sort();
+  const uniqueSubGenres = Array.from(subGenresSet).sort();
 
   if (categoryPillsContainer) {
     let html = `
@@ -1562,22 +1569,40 @@ function renderCategoryPills(books) {
     });
   }
 
+  // Category Manager List
   if (categoryManagerList) {
     if (uniqueGenres.length === 0) {
       categoryManagerList.innerHTML = `<p class="text-xs text-slate-400 italic">No custom categories found.</p>`;
-      return;
+    } else {
+      categoryManagerList.innerHTML = uniqueGenres.map(genre => {
+        return `
+          <div class="flex items-center justify-between bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-xl text-xs">
+            <span class="font-bold text-slate-700">${escapeHtml(genre)}</span>
+            <button onclick="handleDeleteCategory('${escapeHtml(genre)}')" class="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition font-semibold" title="Delete Category">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `;
+      }).join("");
     }
+  }
 
-    categoryManagerList.innerHTML = uniqueGenres.map(genre => {
-      return `
-        <div class="flex items-center justify-between bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-xl text-xs">
-          <span class="font-bold text-slate-700">${escapeHtml(genre)}</span>
-          <button onclick="handleDeleteCategory('${escapeHtml(genre)}')" class="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition font-semibold" title="Delete Category">
-            <i class="fa-solid fa-trash-can"></i>
-          </button>
-        </div>
-      `;
-    }).join("");
+  // Sub-Category Manager List
+  if (subCategoryManagerList) {
+    if (uniqueSubGenres.length === 0) {
+      subCategoryManagerList.innerHTML = `<p class="text-xs text-slate-400 italic">No custom sub-categories found.</p>`;
+    } else {
+      subCategoryManagerList.innerHTML = uniqueSubGenres.map(subGenre => {
+        return `
+          <div class="flex items-center justify-between bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-xl text-xs">
+            <span class="font-bold text-slate-700">${escapeHtml(subGenre)}</span>
+            <button onclick="handleDeleteSubCategory('${escapeQuotes(subGenre)}')" class="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 rounded-lg transition font-semibold" title="Delete Sub-Category">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        `;
+      }).join("");
+    }
   }
 }
 
@@ -1600,6 +1625,30 @@ window.handleDeleteCategory = async (categoryToDelete) => {
       alert(`Category "${categoryToDelete}" deleted. Updated ${booksToUpdate.length} book(s) to "General".`);
     } catch (err) {
       alert("Error deleting category: " + err.message);
+    }
+  }
+};
+
+window.handleDeleteSubCategory = async (subCategoryToDelete) => {
+  if (currentUserRole !== "admin") {
+    alert("Only Admins can delete sub-categories.");
+    return;
+  }
+
+  if (confirm(`Are you sure you want to delete the "${subCategoryToDelete}" sub-category? All books tagged with this sub-category will have their sub-category field cleared.`)) {
+    try {
+      const booksToUpdate = allBooks.filter(
+        b => b.subCategory && b.subCategory.toLowerCase().trim() === subCategoryToDelete.toLowerCase().trim()
+      );
+
+      const updatePromises = booksToUpdate.map(
+        b => updateDoc(doc(db, "books", b.id), { subCategory: "" })
+      );
+
+      await Promise.all(updatePromises);
+      alert(`Sub-category "${subCategoryToDelete}" deleted. Updated ${booksToUpdate.length} book(s).`);
+    } catch (err) {
+      alert("Error deleting sub-category: " + err.message);
     }
   }
 };
@@ -1687,7 +1736,6 @@ async function promptRemoveSubCategory() {
       subCategoryInput.value = "";
     }
 
-    // Optional: Clear subCategory field on existing books in database if confirmed
     if (confirm(`Do you also want to remove "${selectedSubCat}" sub-genre tag from all books in the catalog?`)) {
       try {
         const booksToUpdate = allBooks.filter(b => b.subCategory && b.subCategory.toLowerCase().trim() === selectedSubCat.toLowerCase().trim());
