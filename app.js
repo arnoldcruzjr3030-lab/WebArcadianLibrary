@@ -1175,41 +1175,99 @@ if (adminResetPwdBtn) {
 
 // Auth State Observer
 onAuthStateChanged(auth, async (user) => {
-  if (!user) {
-    if (isAdminPage) window.location.href = "login.html";
-    return;
-  }
+  if (user) {
+    const userProfileStatus = await syncUserProfile(user);
+    const role = userProfileStatus.role;
+    const isApproved = userProfileStatus.approved;
 
-  if (userEmailDisplay) {
-    userEmailDisplay.innerHTML = `
-      <span class="break-all">${user.email}</span>
-      <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">ADMIN</span>
-    `;
-  }
+    // 1. Block unapproved students
+    if (role === "student" && !isApproved) {
+      if (isLoginPage && authError) {
+        authError.textContent = "Your account is pending verification by the Library Admin.";
+        authError.classList.remove("hidden");
+      } else {
+        alert("Your account is currently pending Admin verification.");
+        await signOut(auth);
+        window.location.href = "login.html";
+        return;
+      }
+    }
 
-  const userProfileStatus = await syncUserProfile(user);
-  const role = userProfileStatus.role;
+    // 2. Redirect logged-in users away from login page
+    if (isLoginPage && isApproved) {
+      window.location.href = role === "admin" ? "admin-dashboard.html" : "student-dashboard.html";
+      return;
+    }
 
-  if (isAdminPage) {
-    loadRegisteredStudents();
-    listenToPendingBorrowRequests();
-    listenToAllStudentRecords();
+    // 3. Restrict admin-only dashboard access
+    if (isAdminPage && role !== "admin") {
+      alert("Access Denied: Only Admins can access the Admin Control Panel.");
+      window.location.href = "student-dashboard.html";
+      return;
+    }
 
-    const editId = sessionStorage.getItem("editBookId");
-    if (editId) {
-      sessionStorage.removeItem("editBookId");
-      switchAdminTab("catalog");
-      setTimeout(() => window.populateEditForm(editId), 300);
+    // 4. Update Header UI for logged-in user across all pages (index.html, profile.html, etc.)
+    if (loginNavBtn) loginNavBtn.classList.add("hidden");
+    if (userProfile) {
+      userProfile.classList.remove("hidden");
+      userProfile.classList.add("flex");
+    }
+
+    if (dashboardPortalBtn) {
+      dashboardPortalBtn.href = role === "admin" ? "admin-dashboard.html" : "student-dashboard.html";
+    }
+
+    if (userEmailDisplay) {
+      userEmailDisplay.innerHTML = `
+        <span class="break-all">${user.email}</span>
+        <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-md ${role === 'admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'}">
+          ${role}
+        </span>
+      `;
+    }
+
+    // 5. Admin-specific initializations
+    if (isAdminPage) {
+      loadRegisteredStudents();
+      listenToPendingBorrowRequests();
+      listenToAllStudentRecords();
+
+      const editId = sessionStorage.getItem("editBookId");
+      if (editId) {
+        sessionStorage.removeItem("editBookId");
+        switchAdminTab("catalog");
+        setTimeout(() => window.populateEditForm(editId), 300);
+      }
+    }
+
+    // 6. Listeners & Profile Details
+    listenToStudentBorrowedBooks(user.uid);
+    listenToUserBookmarks(user.uid);
+
+    if (isProfilePage) {
+      loadStudentProfileDetails(user);
+    }
+  } else {
+    // Logged Out State
+    currentUserRole = "student";
+    currentUserApproved = false;
+    studentActiveBorrowedMap.clear();
+    studentBorrowRecordMap.clear();
+    studentBookmarkedMap.clear();
+
+    if (isAdminPage || isStudentPage || isProfilePage) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    if (loginNavBtn) loginNavBtn.classList.remove("hidden");
+    if (userProfile) {
+      userProfile.classList.add("hidden");
+      userProfile.classList.remove("flex");
     }
   }
 
-  listenToStudentBorrowedBooks(user.uid);
-  listenToUserBookmarks(user.uid);
-
-  if (isProfilePage) {
-    loadStudentProfileDetails(user);
-  }
-
+  // Load books collection for catalog
   listenToBookCollection();
 });
 
