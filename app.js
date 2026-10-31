@@ -144,6 +144,7 @@ const subgenreSearchInput = document.getElementById("subgenre-search-input");
 const bookSearchInput = document.getElementById("book-search-input");
 const resetGenreFilterBtn = document.getElementById("reset-genre-filter-btn");
 const genreQuickList = document.getElementById("genre-quick-list");
+const quickPickDropdown = document.getElementById("quick-pick-dropdown");
 const filteredCountBadge = document.getElementById("filtered-count-badge");
 const totalBooksCounter = document.getElementById("total-books-counter");
 
@@ -389,67 +390,58 @@ function populateGenreFilters(books) {
   genreCategorySelect.innerHTML = `<option value="ALL">All Genres</option>` + 
     sortedCategories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join("");
 
+  if (quickPickDropdown) {
+    quickPickDropdown.innerHTML = `<option value="ALL">-- Select Quick Genre --</option>` +
+      sortedCategories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join("");
+  }
+
   if (genreQuickList) {
-    genreQuickList.innerHTML = sortedCategories.map((cat, idx) => {
-      const booksInCat = books.filter(b => b.category && b.category.trim().toLowerCase() === cat.toLowerCase());
-      const containerId = `genre-books-list-${idx}`;
-
+    genreQuickList.innerHTML = sortedCategories.map(cat => {
+      const count = books.filter(b => b.category && b.category.trim().toLowerCase() === cat.toLowerCase()).length;
       return `
-        <div class="group relative rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-indigo-50/50 transition">
-          <button 
-            type="button" 
-            onclick="toggleGenreBooksList('${containerId}', '${escapeQuotes(cat)}')" 
-            class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-indigo-700 transition flex items-center justify-between"
-          >
-            <span class="flex items-center gap-1.5 truncate">
-              <i class="fa-solid fa-folder text-indigo-500 text-[11px]"></i>
-              <span>${escapeHtml(cat)}</span>
-            </span>
-            <div class="flex items-center gap-1.5 flex-shrink-0">
-              <span class="px-1.5 py-0.2 text-[10px] font-extrabold bg-slate-200 text-slate-600 rounded-full group-hover:bg-indigo-200 group-hover:text-indigo-800">${booksInCat.length}</span>
-              <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-hover:text-indigo-600 transition"></i>
-            </div>
-          </button>
-
-          <!-- Collapsible book titles list on hover or click -->
-          <div id="${containerId}" class="hidden group-hover:block px-2 pb-2 pt-1 border-t border-slate-200/60 space-y-1 bg-white rounded-b-xl">
-            ${booksInCat.length === 0 ? `
-              <p class="text-[11px] text-slate-400 italic px-2 py-1">No books in this genre.</p>
-            ` : booksInCat.map(b => `
-              <button 
-                type="button" 
-                onclick="openSummaryModal('${escapeQuotes(b.title)}', '${escapeQuotes(b.author)}', '${escapeQuotes(b.summary)}', '${escapeQuotes(b.category)}', '${escapeQuotes(b.coverUrl)}', '${escapeQuotes(b.subCategory || '')}')" 
-                class="w-full text-left px-2 py-1 rounded-lg text-[11px] font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition truncate flex items-center gap-1.5"
-                title="${escapeHtml(b.title)}"
-              >
-                <i class="fa-solid fa-book-bookmark text-[9px] text-indigo-400 flex-shrink-0"></i>
-                <span class="truncate">${escapeHtml(b.title)}</span>
-              </button>
-            `).join("")}
-          </div>
-        </div>
+        <button 
+          type="button" 
+          onclick="window.selectGenreQuickFilter('${escapeQuotes(cat)}')" 
+          class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition flex items-center justify-between"
+        >
+          <span class="flex items-center gap-2 truncate">
+            <i class="fa-solid fa-folder text-indigo-500 text-xs"></i>
+            <span>${escapeHtml(cat)}</span>
+          </span>
+          <span class="px-2 py-0.5 text-[10px] font-extrabold bg-slate-100 text-slate-600 rounded-full">${count}</span>
+        </button>
       `;
     }).join("");
   }
 }
 
 window.toggleGenreBooksList = (containerId, genreName) => {
-  const target = document.getElementById(containerId);
-  if (target) {
-    target.classList.toggle("hidden");
+  const menu = document.getElementById("quick-pick-menu");
+  const chevron = document.getElementById("quick-pick-chevron");
+  
+  if (menu) {
+    menu.classList.toggle("hidden");
+    if (chevron) {
+      chevron.classList.toggle("rotate-180");
+    }
   }
-  window.selectGenreQuickFilter(genreName);
+
+  if (genreName) {
+    window.selectGenreQuickFilter(genreName);
+  }
 };
 
 window.selectGenreQuickFilter = (genreName) => {
   selectedMainGenre = genreName;
   if (genreCategorySelect) genreCategorySelect.value = genreName;
+  if (quickPickDropdown) quickPickDropdown.value = genreName;
   renderBooksCatalogGrid(allBooks);
 };
 
 if (genreCategorySelect) {
   genreCategorySelect.addEventListener("change", (e) => {
     selectedMainGenre = e.target.value;
+    if (quickPickDropdown) quickPickDropdown.value = e.target.value;
     renderBooksCatalogGrid(allBooks);
   });
 }
@@ -470,6 +462,7 @@ if (resetGenreFilterBtn) {
   resetGenreFilterBtn.addEventListener("click", () => {
     selectedMainGenre = "ALL";
     if (genreCategorySelect) genreCategorySelect.value = "ALL";
+    if (quickPickDropdown) quickPickDropdown.value = "ALL";
     if (subgenreSearchInput) subgenreSearchInput.value = "";
     if (bookSearchInput) bookSearchInput.value = "";
     renderBooksCatalogGrid(allBooks);
