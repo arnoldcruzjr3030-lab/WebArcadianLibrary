@@ -287,6 +287,80 @@ window.closeSummaryModal = () => {
   if (modal) modal.classList.add("hidden");
 };
 
+// Render Popular / Frequently Borrowed Section (Summary hidden, viewable only in Preview)
+function renderTopBooks(books) {
+  if (!topBooksContainer) return;
+
+  const categoryFilteredBooks = books.filter(b => {
+    return activeCategoryFilter === "ALL" || 
+      (b.category && b.category.toLowerCase().trim() === activeCategoryFilter.toLowerCase().trim());
+  });
+
+  if (categoryFilteredBooks.length === 0) {
+    topBooksContainer.innerHTML = `<p class="col-span-full text-center text-slate-400 text-sm py-4">No popular books found in this category.</p>`;
+    return;
+  }
+
+  const topBooks = [...categoryFilteredBooks]
+    .sort((a, b) => ((b.copies || 1) - (b.available || 0)) - ((a.copies || 1) - (a.available || 0)))
+    .slice(0, 3);
+
+  const isAdmin = currentUserRole === "admin";
+
+  topBooksContainer.innerHTML = topBooks.map((book) => {
+    const isAvailable = book.available > 0;
+    const borrowedCount = (book.copies || 1) - (book.available || 0);
+    const isBookmarked = studentBookmarkedMap.has(book.id);
+    const subCatPill = book.subCategory ? `<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200">${escapeHtml(book.subCategory)}</span>` : '';
+
+    return `
+      <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between hover:shadow-md transition">
+        <div>
+          <div class="flex items-start justify-between gap-2 mb-3">
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                ${escapeHtml(book.category || 'General')}
+              </span>
+              ${subCatPill}
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="handleToggleBookmark('${book.id}')" class="text-xs p-1.5 rounded-lg transition ${isBookmarked ? 'text-red-600 bg-red-50' : 'text-slate-400 hover:text-red-500 bg-slate-50'}" title="${isBookmarked ? 'Remove Bookmark' : 'Bookmark Book'}">
+                <i class="${isBookmarked ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+              </button>
+              <span class="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
+                <i class="fa-solid fa-fire"></i> ${borrowedCount} borrowed
+              </span>
+            </div>
+          </div>
+
+          <div class="flex gap-3 mb-3">
+            ${renderBookCoverHTML(book.coverUrl, book.title, book.category, "w-16 h-24")}
+            <div>
+              <h4 class="font-bold text-slate-900 text-base line-clamp-2 leading-snug">${escapeHtml(book.title)}</h4>
+              <p class="text-xs text-slate-500 font-medium mt-1">by ${escapeHtml(book.author)}</p>
+              ${book.isbn ? `<p class="text-[10px] text-slate-400 font-mono mt-0.5">ISBN: ${escapeHtml(book.isbn)}</p>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs gap-2">
+          <span class="font-bold ${isAvailable ? 'text-emerald-600' : 'text-red-500'}">
+            ${isAvailable ? `${book.available} Available` : 'Out of Stock'}
+          </span>
+          ${!isAdmin ? `
+            <div class="flex items-center gap-1.5">
+              <button onclick="openSummaryModal('${escapeQuotes(book.title)}', '${escapeQuotes(book.author)}', '${escapeQuotes(book.summary)}', '${escapeQuotes(book.category)}', '${escapeQuotes(book.coverUrl)}', '${escapeQuotes(book.subCategory || '')}')" class="px-2.5 py-1.5 rounded-lg font-semibold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Preview</button>
+              <button onclick="handleBorrowAction('${book.id}', ${book.available})" class="px-3 py-1.5 rounded-lg font-semibold text-xs transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}" ${!isAvailable ? 'disabled' : ''}>Request</button>
+            </div>
+          ` : `
+            <button onclick="populateEditForm('${book.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+          `}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
 // Sync User Profile Details & Header Display
 async function syncUserProfile(user, inputStudentId = "", firstName = "", lastName = "") {
   const userRef = doc(db, "users", user.uid);
@@ -1709,85 +1783,6 @@ function listenToBookCollection() {
   }, (error) => {
     console.error("Firestore Listen Error:", error);
   });
-}
-
-function renderTopBooks(books) {
-  if (!topBooksContainer) return;
-
-  const categoryFilteredBooks = books.filter(b => {
-    return activeCategoryFilter === "ALL" || 
-      (b.category && b.category.toLowerCase().trim() === activeCategoryFilter.toLowerCase().trim());
-  });
-
-  if (categoryFilteredBooks.length === 0) {
-    topBooksContainer.innerHTML = `<p class="col-span-full text-center text-slate-400 text-sm py-4">No popular books found in this category.</p>`;
-    return;
-  }
-
-  const topBooks = [...categoryFilteredBooks]
-    .sort((a, b) => ((b.copies || 1) - (b.available || 0)) - ((a.copies || 1) - (a.available || 0)))
-    .slice(0, 3);
-
-  const isAdmin = currentUserRole === "admin";
-
-  topBooksContainer.innerHTML = topBooks.map((book) => {
-    const isAvailable = book.available > 0;
-    const borrowedCount = (book.copies || 1) - (book.available || 0);
-    const isBookmarked = studentBookmarkedMap.has(book.id);
-    const subCatPill = book.subCategory ? `<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200">${escapeHtml(book.subCategory)}</span>` : '';
-
-    return `
-      <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between hover:shadow-md transition">
-        <div>
-          <div class="flex items-start justify-between gap-2 mb-3">
-            <div class="flex items-center gap-1 flex-wrap">
-              <span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
-                ${escapeHtml(book.category || 'General')}
-              </span>
-              ${subCatPill}
-            </div>
-            <div class="flex items-center gap-2">
-              <button onclick="handleToggleBookmark('${book.id}')" class="text-xs p-1.5 rounded-lg transition ${isBookmarked ? 'text-red-600 bg-red-50' : 'text-slate-400 hover:text-red-500 bg-slate-50'}" title="${isBookmarked ? 'Remove Bookmark' : 'Bookmark Book'}">
-                <i class="${isBookmarked ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-              </button>
-              <span class="text-[11px] font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-100">
-                <i class="fa-solid fa-fire"></i> ${borrowedCount} borrowed
-              </span>
-            </div>
-          </div>
-
-          <div class="flex gap-3 mb-3">
-            ${renderBookCoverHTML(book.coverUrl, book.title, book.category, "w-16 h-24")}
-            <div>
-              <h4 class="font-bold text-slate-900 text-base line-clamp-2 leading-snug">${escapeHtml(book.title)}</h4>
-              <p class="text-xs text-slate-500 font-medium mt-1">by ${escapeHtml(book.author)}</p>
-              ${book.isbn ? `<p class="text-[10px] text-slate-400 font-mono mt-0.5">ISBN: ${escapeHtml(book.isbn)}</p>` : ''}
-            </div>
-          </div>
-
-          ${book.summary ? `
-            <p class="text-[11px] text-slate-500 line-clamp-2 italic mb-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
-              "${escapeHtml(book.summary)}"
-            </p>
-          ` : ''}
-        </div>
-
-        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs gap-2">
-          <span class="font-bold ${isAvailable ? 'text-emerald-600' : 'text-red-500'}">
-            ${isAvailable ? `${book.available} Available` : 'Out of Stock'}
-          </span>
-          ${!isAdmin ? `
-            <div class="flex items-center gap-1.5">
-              <button onclick="openSummaryModal('${escapeQuotes(book.title)}', '${escapeQuotes(book.author)}', '${escapeQuotes(book.summary)}', '${escapeQuotes(book.category)}', '${escapeQuotes(book.coverUrl)}', '${escapeQuotes(book.subCategory || '')}')" class="px-2.5 py-1.5 rounded-lg font-semibold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Preview</button>
-              <button onclick="handleBorrowAction('${book.id}', ${book.available})" class="px-3 py-1.5 rounded-lg font-semibold text-xs transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}" ${!isAvailable ? 'disabled' : ''}>Request</button>
-            </div>
-          ` : `
-            <button onclick="populateEditForm('${book.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
-          `}
-        </div>
-      </div>
-    `;
-  }).join("");
 }
 
 function renderBookTable(books) {
