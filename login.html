@@ -38,15 +38,35 @@
     <!-- Error Alert Box -->
     <div id="auth-error" class="hidden p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold rounded-xl text-center"></div>
 
-    <!-- FIXED: Removed method="POST" and action="#" -->
     <form id="auth-form" onsubmit="return false;" class="space-y-4">
       
-      <!-- Student ID Field (Visible during Sign Up) -->
-      <div id="student-id-container" class="hidden">
-        <label class="block text-xs font-bold text-slate-300 mb-1.5">Student ID Number *</label>
-        <div class="relative">
-          <input type="text" id="auth-student-id" name="student_id" autocomplete="off" placeholder="e.g. 2026-10492" class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
-          <i class="fa-solid fa-id-card absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+      <!-- Sign Up Fields Container (First Name, Last Name, Student ID) -->
+      <div id="signup-fields-container" class="hidden space-y-4">
+        <!-- First Name & Last Name Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">First Name *</label>
+            <div class="relative">
+              <input type="text" id="auth-first-name" name="first_name" autocomplete="given-name" placeholder="John" class="w-full pl-9 pr-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
+              <i class="fa-solid fa-user absolute left-3 top-3 text-slate-500 text-xs"></i>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1.5">Last Name *</label>
+            <div class="relative">
+              <input type="text" id="auth-last-name" name="last_name" autocomplete="family-name" placeholder="Doe" class="w-full pl-9 pr-3 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
+              <i class="fa-solid fa-user absolute left-3 top-3 text-slate-500 text-xs"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Student ID Field -->
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5">Student ID Number *</label>
+          <div class="relative">
+            <input type="text" id="auth-student-id" name="student_id" autocomplete="off" placeholder="e.g. 2026-10492" class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
+            <i class="fa-solid fa-id-card absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+          </div>
         </div>
       </div>
 
