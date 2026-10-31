@@ -33,13 +33,14 @@
       </button>
 
       <!-- Right Navigation Actions -->
-      <div id="user-nav" class="hidden sm:flex w-full sm:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800 transition-all duration-200">
+      <div id="user-nav" class="hidden sm:flex w-full sm:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-800 transition-all duration-200">
+        
         <a id="login-nav-btn" href="login.html" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
           <i class="fa-solid fa-right-to-bracket"></i> Sign In / Register
         </a>
 
         <!-- Logged-in Navigation Profile -->
-        <div id="user-profile" class="hidden items-center justify-between sm:justify-start gap-2 flex-wrap pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
+        <div id="user-profile" class="hidden flex-col sm:flex-row items-stretch sm:items-center justify-between sm:justify-start gap-2.5 w-full sm:w-auto pt-2 sm:pt-0">
           <div class="flex items-center gap-2 w-full sm:w-auto">
             <a id="dashboard-portal-btn" href="student-dashboard.html" class="flex-1 sm:flex-none justify-center bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 border border-slate-700">
               <i class="fa-solid fa-table-columns"></i> Dashboard
@@ -48,13 +49,15 @@
               <i class="fa-solid fa-user"></i> Profile
             </a>
           </div>
-          <div class="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/60">
-            <span id="user-email-display" class="text-xs text-slate-300 font-medium truncate max-w-[160px] sm:max-w-none"></span>
+
+          <div class="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
+            <span id="user-email-display" class="text-xs text-slate-300 font-medium truncate max-w-[200px] sm:max-w-none flex items-center gap-1.5"></span>
             <button id="logout-btn" class="bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 border border-slate-700 flex-shrink-0" title="Logout">
               <i class="fa-solid fa-right-from-bracket"></i> Logout
             </button>
           </div>
         </div>
+
       </div>
 
     </div>
