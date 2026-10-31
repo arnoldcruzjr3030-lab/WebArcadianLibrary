@@ -94,8 +94,9 @@ const isbnInput = document.getElementById("isbn");
 const summaryInput = document.getElementById("summary");
 const coverUrlInput = document.getElementById("cover-url");
 const categoryInput = document.getElementById("category");
-const subCategoryInput = document.getElementById("sub-category"); // Added Sub-genre Input
+const subCategoryInput = document.getElementById("sub-category");
 const quickAddCatBtn = document.getElementById("quick-add-cat-btn");
+const quickAddSubCatBtn = document.getElementById("quick-add-subcat-btn");
 const categoryManagerList = document.getElementById("category-manager-list");
 const copiesInput = document.getElementById("copies");
 const availableInput = document.getElementById("available");
@@ -160,7 +161,7 @@ let activeStudentRecords = [];
 let cancelledStudentRecords = [];
 let studentActiveBorrowedMap = new Map();
 let studentBorrowRecordMap = new Map();
-let studentBookmarkedMap = new Map(); // bookId -> bookmarkDocId
+let studentBookmarkedMap = new Map();
 let isSignUpMode = false;
 let unsubscribeSnapshot = null;
 let unsubscribeBorrowedSnapshot = null;
@@ -568,6 +569,7 @@ window.handleDeleteCategory = async (categoryToDelete) => {
   }
 };
 
+// Main Category Quick Add
 function promptAddNewCategory() {
   if (!categoryInput) return;
   const newCat = prompt("Enter new category name:");
@@ -594,6 +596,36 @@ function promptAddNewCategory() {
   }
 }
 
+// Sub-Genre Quick Add Function
+function promptAddNewSubCategory() {
+  if (!subCategoryInput) return;
+  const newSubCat = prompt("Enter new sub-genre name:");
+  if (newSubCat && newSubCat.trim() !== "") {
+    const trimmed = newSubCat.trim();
+    
+    if (subCategoryInput.tagName === "SELECT") {
+      let exists = false;
+      for (let option of subCategoryInput.options) {
+        if (option.value.toLowerCase() === trimmed.toLowerCase()) {
+          exists = true;
+          subCategoryInput.value = option.value;
+          break;
+        }
+      }
+
+      if (!exists) {
+        const newOption = document.createElement("option");
+        newOption.value = trimmed;
+        newOption.textContent = trimmed;
+        subCategoryInput.insertBefore(newOption, subCategoryInput.lastElementChild);
+        subCategoryInput.value = trimmed;
+      }
+    } else {
+      subCategoryInput.value = trimmed;
+    }
+  }
+}
+
 if (categoryInput) {
   categoryInput.addEventListener("change", (e) => {
     if (e.target.value === "__ADD_NEW__") {
@@ -604,6 +636,19 @@ if (categoryInput) {
 
 if (quickAddCatBtn) {
   quickAddCatBtn.addEventListener("click", promptAddNewCategory);
+}
+
+// Sub-Genre Event Listeners
+if (subCategoryInput) {
+  subCategoryInput.addEventListener("change", (e) => {
+    if (e.target.value === "__ADD_NEW__") {
+      promptAddNewSubCategory();
+    }
+  });
+}
+
+if (quickAddSubCatBtn) {
+  quickAddSubCatBtn.addEventListener("click", promptAddNewSubCategory);
 }
 
 function populateCategoriesFromBooks(books) {
@@ -1142,7 +1187,30 @@ onAuthStateChanged(auth, async (user) => {
     `;
   }
 
-  await handleUserRoleRedirect(user);
+  const userProfileStatus = await syncUserProfile(user);
+  const role = userProfileStatus.role;
+
+  if (isAdminPage) {
+    loadRegisteredStudents();
+    listenToPendingBorrowRequests();
+    listenToAllStudentRecords();
+
+    const editId = sessionStorage.getItem("editBookId");
+    if (editId) {
+      sessionStorage.removeItem("editBookId");
+      switchAdminTab("catalog");
+      setTimeout(() => window.populateEditForm(editId), 300);
+    }
+  }
+
+  listenToStudentBorrowedBooks(user.uid);
+  listenToUserBookmarks(user.uid);
+
+  if (isProfilePage) {
+    loadStudentProfileDetails(user);
+  }
+
+  listenToBookCollection();
 });
 
 // Load Profile Details
@@ -1704,6 +1772,12 @@ if (bookForm) {
       categoryValue = newCat && newCat.trim() !== "" ? newCat.trim() : "General";
     }
 
+    let subCategoryValue = subCategoryInput ? subCategoryInput.value : "";
+    if (subCategoryValue === "__ADD_NEW__") {
+      const newSubCat = prompt("Enter sub-genre name:");
+      subCategoryValue = newSubCat && newSubCat.trim() !== "" ? newSubCat.trim() : "";
+    }
+
     const bookData = {
       title: titleInput.value.trim(),
       author: authorInput.value.trim(),
@@ -1711,7 +1785,7 @@ if (bookForm) {
       summary: summaryInput ? summaryInput.value.trim() : "",
       coverUrl: coverUrlInput ? coverUrlInput.value.trim() : "",
       category: categoryValue,
-      subCategory: subCategoryInput ? subCategoryInput.value.trim() : "", // Saved Sub-genre
+      subCategory: subCategoryValue ? subCategoryValue.trim() : "",
       copies: parseInt(copiesInput.value, 10),
       available: parseInt(availableInput.value, 10)
     };
@@ -1747,7 +1821,7 @@ window.populateEditForm = (id) => {
   if (isbnInput) isbnInput.value = book.isbn || "";
   if (summaryInput) summaryInput.value = book.summary || "";
   if (coverUrlInput) coverUrlInput.value = book.coverUrl || "";
-  if (subCategoryInput) subCategoryInput.value = book.subCategory || ""; // Populated Sub-genre
+  if (subCategoryInput) subCategoryInput.value = book.subCategory || "";
   
   if (categoryInput) {
     const catVal = book.category || "General";
