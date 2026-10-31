@@ -94,6 +94,7 @@ const isbnInput = document.getElementById("isbn");
 const summaryInput = document.getElementById("summary");
 const coverUrlInput = document.getElementById("cover-url");
 const categoryInput = document.getElementById("category");
+const subCategoryInput = document.getElementById("sub-category"); // Added Sub-genre Input
 const quickAddCatBtn = document.getElementById("quick-add-cat-btn");
 const categoryManagerList = document.getElementById("category-manager-list");
 const copiesInput = document.getElementById("copies");
@@ -220,7 +221,7 @@ function renderFallbackCoverHTML(title, category, extraClass = "w-12 h-16") {
 }
 
 // Modal View Handler
-window.openSummaryModal = (title, author, summaryText, category = "General", imageUrl = "") => {
+window.openSummaryModal = (title, author, summaryText, category = "General", imageUrl = "", subCategory = "") => {
   const modal = document.getElementById("summary-modal");
   const modalTitle = document.getElementById("modal-book-title");
   const modalAuthor = document.getElementById("modal-book-author");
@@ -232,7 +233,11 @@ window.openSummaryModal = (title, author, summaryText, category = "General", ima
 
   if (modalTitle) modalTitle.textContent = title;
   if (modalAuthor) modalAuthor.textContent = `by ${author}`;
-  if (modalCategory) modalCategory.textContent = category;
+  if (modalCategory) {
+    modalCategory.textContent = subCategory && subCategory.trim() !== "" 
+      ? `${category} • ${subCategory}` 
+      : category;
+  }
   if (modalSummary) modalSummary.textContent = summaryText && summaryText.trim() !== "" ? summaryText : "No summary available.";
 
   if (coverContainer) {
@@ -272,6 +277,7 @@ window.handleToggleBookmark = async (bookId) => {
         bookTitle: book.title,
         bookAuthor: book.author,
         category: book.category || "General",
+        subCategory: book.subCategory || "",
         coverUrl: book.coverUrl || "",
         createdAt: new Date()
       });
@@ -320,6 +326,8 @@ function renderBookmarksTable(bookmarks, targetTbody) {
   }
 
   targetTbody.innerHTML = bookmarks.map((item) => {
+    const subCatPill = item.subCategory ? `<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200 ml-1">${escapeHtml(item.subCategory)}</span>` : '';
+
     return `
       <tr class="hover:bg-slate-50 transition">
         <td class="py-3 px-4">
@@ -333,6 +341,7 @@ function renderBookmarksTable(bookmarks, targetTbody) {
         </td>
         <td class="py-3 px-3 text-center">
           <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">${escapeHtml(item.category || 'General')}</span>
+          ${subCatPill}
         </td>
         <td class="py-3 px-3 text-center text-slate-500 font-medium">
           ${item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
@@ -1543,14 +1552,18 @@ function renderTopBooks(books) {
     const isAvailable = book.available > 0;
     const borrowedCount = (book.copies || 1) - (book.available || 0);
     const isBookmarked = studentBookmarkedMap.has(book.id);
+    const subCatPill = book.subCategory ? `<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200">${escapeHtml(book.subCategory)}</span>` : '';
 
     return `
       <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col justify-between hover:shadow-md transition">
         <div>
           <div class="flex items-start justify-between gap-2 mb-3">
-            <span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
-              ${escapeHtml(book.category || 'General')}
-            </span>
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                ${escapeHtml(book.category || 'General')}
+              </span>
+              ${subCatPill}
+            </div>
             <div class="flex items-center gap-2">
               <button onclick="handleToggleBookmark('${book.id}')" class="text-xs p-1.5 rounded-lg transition ${isBookmarked ? 'text-red-600 bg-red-50' : 'text-slate-400 hover:text-red-500 bg-slate-50'}" title="${isBookmarked ? 'Remove Bookmark' : 'Bookmark Book'}">
                 <i class="${isBookmarked ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
@@ -1583,7 +1596,7 @@ function renderTopBooks(books) {
           </span>
           ${!isAdmin ? `
             <div class="flex items-center gap-1.5">
-              <button onclick="openSummaryModal('${escapeHtml(book.title)}', '${escapeHtml(book.author)}', '${escapeHtml(book.summary)}', '${escapeHtml(book.category)}', '${escapeHtml(book.coverUrl)}')" class="px-2.5 py-1.5 rounded-lg font-semibold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Preview</button>
+              <button onclick="openSummaryModal('${escapeHtml(book.title)}', '${escapeHtml(book.author)}', '${escapeHtml(book.summary)}', '${escapeHtml(book.category)}', '${escapeHtml(book.coverUrl)}', '${escapeHtml(book.subCategory || '')}')" class="px-2.5 py-1.5 rounded-lg font-semibold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Preview</button>
               <button onclick="handleBorrowAction('${book.id}', ${book.available})" class="px-3 py-1.5 rounded-lg font-semibold text-xs transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}" ${!isAvailable ? 'disabled' : ''}>Request</button>
             </div>
           ` : `
@@ -1605,6 +1618,7 @@ function renderBookTable(books) {
       b.title.toLowerCase().includes(searchTerm) ||
       b.author.toLowerCase().includes(searchTerm) ||
       (b.category && b.category.toLowerCase().includes(searchTerm)) ||
+      (b.subCategory && b.subCategory.toLowerCase().includes(searchTerm)) ||
       (b.isbn && b.isbn.includes(searchTerm)) ||
       (b.summary && b.summary.toLowerCase().includes(searchTerm));
 
@@ -1641,6 +1655,7 @@ function renderBookTable(books) {
     const requestStatus = studentActiveBorrowedMap.get(book.id);
     const activeBorrowRecordId = studentBorrowRecordMap.get(book.id) || "";
     const isBookmarked = studentBookmarkedMap.has(book.id);
+    const subCatPill = book.subCategory ? `<span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200 ml-1">${escapeHtml(book.subCategory)}</span>` : '';
 
     return `
       <tr class="hover:bg-slate-50 transition">
@@ -1657,7 +1672,7 @@ function renderBookTable(books) {
                 ` : ''}
               </div>
               <div class="text-[11px] text-slate-500 font-medium">by ${escapeHtml(book.author)} ${book.isbn ? `• ISBN: ${escapeHtml(book.isbn)}` : ''}</div>
-              <button onclick="openSummaryModal('${escapeHtml(book.title)}', '${escapeHtml(book.author)}', '${escapeHtml(book.summary)}', '${escapeHtml(book.category)}', '${escapeHtml(book.coverUrl)}')" class="mt-1 text-[10px] text-indigo-600 hover:underline font-bold inline-flex items-center gap-1">
+              <button onclick="openSummaryModal('${escapeHtml(book.title)}', '${escapeHtml(book.author)}', '${escapeHtml(book.summary)}', '${escapeHtml(book.category)}', '${escapeHtml(book.coverUrl)}', '${escapeHtml(book.subCategory || '')}')" class="mt-1 text-[10px] text-indigo-600 hover:underline font-bold inline-flex items-center gap-1">
                 <i class="fa-solid fa-align-left"></i> Read Description & Summary
               </button>
             </div>
@@ -1665,6 +1680,7 @@ function renderBookTable(books) {
         </td>
         <td class="py-3 px-2 sm:px-3">
           <span class="inline-block px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-700 border border-slate-200">${escapeHtml(book.category || 'General')}</span>
+          ${subCatPill}
         </td>
         <td class="py-3 px-2 sm:px-3 text-center font-medium">
           <span class="${isAvailable ? 'text-emerald-600' : 'text-red-500'} font-bold">${book.available}</span> 
@@ -1769,6 +1785,7 @@ if (bookForm) {
       summary: summaryInput ? summaryInput.value.trim() : "",
       coverUrl: coverUrlInput ? coverUrlInput.value.trim() : "",
       category: categoryValue,
+      subCategory: subCategoryInput ? subCategoryInput.value.trim() : "", // Saved Sub-genre
       copies: parseInt(copiesInput.value, 10),
       available: parseInt(availableInput.value, 10)
     };
@@ -1804,6 +1821,7 @@ window.populateEditForm = (id) => {
   if (isbnInput) isbnInput.value = book.isbn || "";
   if (summaryInput) summaryInput.value = book.summary || "";
   if (coverUrlInput) coverUrlInput.value = book.coverUrl || "";
+  if (subCategoryInput) subCategoryInput.value = book.subCategory || ""; // Populated Sub-genre
   
   if (categoryInput) {
     const catVal = book.category || "General";
