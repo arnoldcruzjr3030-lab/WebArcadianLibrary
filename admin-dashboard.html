@@ -361,7 +361,9 @@
 
     <!-- PAGE 4: FINES & PAYMENTS -->
     <div id="page-fines" class="hidden space-y-5 sm:space-y-6">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+      
+      <!-- Top Summary Cards & Global Reset -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
         <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Outstanding Fines</p>
@@ -371,6 +373,7 @@
             <i class="fa-solid fa-triangle-exclamation text-lg sm:text-xl"></i>
           </div>
         </div>
+
         <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Settled Collections</p>
@@ -380,26 +383,67 @@
             <i class="fa-solid fa-vault text-lg sm:text-xl"></i>
           </div>
         </div>
+
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between sm:col-span-2 lg:col-span-1">
+          <div>
+            <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Payment Channel</p>
+            <h3 class="text-sm font-extrabold text-slate-800 mt-1 flex items-center gap-1.5">
+              <i class="fa-solid fa-building-columns text-indigo-600"></i> Over-the-Counter (School Library)
+            </h3>
+          </div>
+          <button onclick="handleResetCollections()" class="px-3 py-2 text-xs font-bold rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 border border-slate-200 transition flex items-center gap-1">
+            <i class="fa-solid fa-rotate-left"></i> Reset Total
+          </button>
+        </div>
       </div>
 
-      <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-        <h3 class="font-bold text-sm sm:text-base text-slate-900 mb-4 pb-3 border-b border-slate-100">Overdue Fine Records</h3>
+      <!-- Overdue Fine Records Card -->
+      <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+        
+        <!-- Controls & Filters Header -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <h3 class="font-bold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-receipt text-indigo-600"></i> Overdue Fine History & OTC Payments
+            </h3>
+            <p class="text-xs text-slate-400">Manage over-the-counter payments, semester histories, and receipts.</p>
+          </div>
+
+          <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
+            <!-- Semester Filter Dropdown -->
+            <select id="fine-semester-filter" onchange="renderFinesTable()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="ALL">All Semesters</option>
+              <option value="2026-1">1st Sem AY 2026-2027</option>
+              <option value="2025-2">2nd Sem AY 2025-2026</option>
+              <option value="2025-1">1st Sem AY 2025-2026</option>
+            </select>
+
+            <!-- CSV Export Button -->
+            <button onclick="exportFinesToCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 whitespace-nowrap">
+              <i class="fa-solid fa-file-csv"></i> Export Fines CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Fines Table -->
         <div class="overflow-x-auto rounded-xl border border-slate-100">
-          <table class="w-full min-w-[650px] text-left border-collapse">
+          <table class="w-full min-w-[700px] text-left border-collapse">
             <thead>
               <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50/50">
                 <th class="py-3 px-4">Student Details</th>
                 <th class="py-3 px-4">Book Title</th>
                 <th class="py-3 px-3 text-center">Days Overdue</th>
                 <th class="py-3 px-3 text-center">Fine Amount</th>
-                <th class="py-3 px-3 text-center">Payment Status</th>
-                <th class="py-3 px-4 text-center">Actions</th>
+                <th class="py-3 px-3 text-center">Status / Channel</th>
+                <th class="py-3 px-4 text-center">Actions & Receipts</th>
               </tr>
             </thead>
             <tbody id="fines-records-tbody" class="divide-y divide-slate-100 text-xs font-medium"></tbody>
           </table>
         </div>
+
       </div>
+
     </div>
 
     <!-- PAGE 5: STUDENT DIRECTORY -->
