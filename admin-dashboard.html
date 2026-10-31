@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    /* Hide scrollbars for cross-platform tab navigation */
+    /* Custom scrollbar styling for tab navigation */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
@@ -16,39 +16,39 @@
 
   <!-- Top Navigation Bar -->
   <header class="bg-slate-900 text-white shadow-md sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2">
       
       <!-- Brand Logo & Title -->
-      <a href="index.html" class="flex items-center gap-3 group">
+      <a href="index.html" class="flex items-center gap-2.5 sm:gap-3 group flex-shrink-0">
         <div class="bg-indigo-600 group-hover:bg-indigo-500 p-2 rounded-xl text-white shadow-sm transition">
-          <i class="fa-solid fa-book-bookmark text-lg"></i>
+          <i class="fa-solid fa-book-bookmark text-base sm:text-lg"></i>
         </div>
         <div>
-          <h1 class="font-extrabold text-base sm:text-lg tracking-tight leading-none">Arcadian <span class="text-indigo-400">Library</span></h1>
-          <p class="text-[10px] text-slate-400 font-medium">Admin Control Portal</p>
+          <h1 class="font-extrabold text-sm sm:text-lg tracking-tight leading-none">Arcadian <span class="text-indigo-400">Library</span></h1>
+          <p class="text-[9px] sm:text-[10px] text-slate-400 font-medium">Admin Control Portal</p>
         </div>
       </a>
 
       <!-- Header Navigation Links & Profile Controls -->
-      <div class="flex items-center gap-2 sm:gap-3">
+      <div class="flex items-center gap-1.5 sm:gap-3">
         <!-- Homepage Link Button -->
-        <a href="index.html" class="text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5" title="Go to Homepage">
+        <a href="index.html" class="text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 px-2.5 py-1.5 rounded-xl transition flex items-center gap-1.5" title="Go to Homepage">
           <i class="fa-solid fa-house text-indigo-400"></i>
-          <span class="hidden sm:inline">Home</span>
+          <span class="hidden md:inline">Home</span>
         </a>
 
         <!-- My Profile Link Button -->
-        <a href="profile.html" class="text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5" title="View My Profile">
+        <a href="profile.html" class="text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800 px-2.5 py-1.5 rounded-xl transition flex items-center gap-1.5" title="View My Profile">
           <i class="fa-solid fa-user-circle text-indigo-400"></i>
-          <span class="hidden sm:inline">My Profile</span>
+          <span class="hidden md:inline">My Profile</span>
         </a>
 
         <!-- User Profile Info & Sign Out -->
-        <div id="user-profile" class="flex items-center gap-2.5 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/60 ml-1">
-          <div id="user-email-display" class="text-xs font-semibold text-slate-200 flex items-center gap-1">
-            <span>Loading...</span>
+        <div id="user-profile" class="flex items-center gap-2 bg-slate-800/80 px-2.5 py-1.5 rounded-xl border border-slate-700/60">
+          <div id="user-email-display" class="text-xs font-semibold text-slate-200 flex items-center gap-1 max-w-[110px] sm:max-w-none truncate">
+            <span class="truncate">Loading...</span>
           </div>
-          <button id="logout-btn" class="text-slate-400 hover:text-red-400 text-xs font-bold transition ml-1" title="Sign Out">
+          <button id="logout-btn" class="text-slate-400 hover:text-red-400 text-xs font-bold transition ml-0.5 flex-shrink-0" title="Sign Out">
             <i class="fa-solid fa-right-from-bracket"></i>
           </button>
         </div>
@@ -58,26 +58,26 @@
   </header>
 
   <!-- Main Container -->
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1 w-full space-y-6">
+  <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-5 sm:py-8 flex-1 w-full space-y-5 sm:space-y-6">
 
     <!-- Admin Account Quick Security Controls Banner -->
     <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
       <div class="flex items-center gap-3">
-        <div class="p-2.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-100">
+        <div class="p-2.5 rounded-xl bg-amber-50 text-amber-700 border border-amber-100 flex-shrink-0">
           <i class="fa-solid fa-user-shield text-base"></i>
         </div>
         <div>
           <h2 class="font-bold text-sm text-slate-900">Admin Privileges & Security</h2>
-          <p class="text-xs text-slate-400">Manage account authentication and role permissions</p>
+          <p class="text-[11px] sm:text-xs text-slate-400">Manage account authentication and role permissions</p>
         </div>
       </div>
       
-      <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-        <button id="admin-reset-pwd-btn" class="flex-1 sm:flex-initial px-3.5 py-2 text-xs font-semibold rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 transition flex items-center justify-center gap-1.5">
+      <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+        <button id="admin-reset-pwd-btn" class="w-full sm:w-auto px-3 py-2 text-xs font-semibold rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
           <i class="fa-solid fa-key"></i> Reset Password
         </button>
-        <button onclick="handleLeaveAdminRole()" class="flex-1 sm:flex-initial px-3.5 py-2 text-xs font-semibold rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200/80 transition flex items-center justify-center gap-1.5">
-          <i class="fa-solid fa-arrow-down-up-lock"></i> Step Down as Admin
+        <button onclick="handleLeaveAdminRole()" class="w-full sm:w-auto px-3 py-2 text-xs font-semibold rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200/80 transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+          <i class="fa-solid fa-arrow-down-up-lock"></i> Step Down
         </button>
       </div>
     </div>
@@ -86,21 +86,21 @@
 
     <!-- Navigation Tabs -->
     <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar border-b border-slate-200">
-      <button id="tab-btn-catalog" class="admin-tab-btn active bg-indigo-600 text-white px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-xs font-semibold shadow-sm">
+      <button id="tab-btn-catalog" class="admin-tab-btn active bg-indigo-600 text-white px-3.5 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-xs font-semibold shadow-sm flex-shrink-0">
         <i class="fa-solid fa-books"></i> Catalog
       </button>
-      <button id="tab-btn-pending" class="admin-tab-btn bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-xs font-semibold">
+      <button id="tab-btn-pending" class="admin-tab-btn bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-xs font-semibold flex-shrink-0">
         <i class="fa-solid fa-clock-rotate-left"></i> Pending
         <span id="pending-request-count-badge" class="bg-amber-500 text-slate-950 font-extrabold text-[10px] px-2 py-0.5 rounded-full">0 Pending</span>
       </button>
-      <button id="tab-btn-borrowing" class="admin-tab-btn bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-xs font-semibold">
+      <button id="tab-btn-borrowing" class="admin-tab-btn bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-xs font-semibold flex-shrink-0">
         <i class="fa-solid fa-list-check"></i> Borrow Records
         <span id="records-count-badge" class="bg-slate-700 text-slate-200 font-bold text-[10px] px-2 py-0.5 rounded-full">0 Records</span>
       </button>
-      <button id="tab-btn-fines" class="admin-tab-btn bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-xs font-semibold">
+      <button id="tab-btn-fines" class="admin-tab-btn bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-xs font-semibold flex-shrink-0">
         <i class="fa-solid fa-hand-holding-dollar"></i> Fines & Payments
       </button>
-      <button id="tab-btn-students" class="admin-tab-btn bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-xs font-semibold">
+      <button id="tab-btn-students" class="admin-tab-btn bg-slate-800 hover:bg-slate-700 text-slate-300 px-3.5 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-xs font-semibold flex-shrink-0">
         <i class="fa-solid fa-users"></i> Student Directory
         <span id="student-count-badge" class="bg-slate-700 text-slate-200 font-bold text-[10px] px-2 py-0.5 rounded-full">0 Accounts</span>
       </button>
@@ -110,34 +110,34 @@
     <div id="page-catalog" class="space-y-6">
       
       <!-- Stats Summary Cards -->
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Book Copies</p>
-            <h3 id="total-count" class="text-2xl font-extrabold text-slate-900 mt-1">0</h3>
+            <h3 id="total-count" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">0</h3>
           </div>
-          <div class="bg-indigo-50 p-3 rounded-2xl text-indigo-600">
-            <i class="fa-solid fa-layer-group text-xl"></i>
+          <div class="bg-indigo-50 p-2.5 sm:p-3 rounded-2xl text-indigo-600">
+            <i class="fa-solid fa-layer-group text-lg sm:text-xl"></i>
           </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Available Stock</p>
-            <h3 id="available-count" class="text-2xl font-extrabold text-emerald-600 mt-1">0</h3>
+            <h3 id="available-count" class="text-xl sm:text-2xl font-extrabold text-emerald-600 mt-1">0</h3>
           </div>
-          <div class="bg-emerald-50 p-3 rounded-2xl text-emerald-600">
-            <i class="fa-solid fa-box-archive text-xl"></i>
+          <div class="bg-emerald-50 p-2.5 sm:p-3 rounded-2xl text-emerald-600">
+            <i class="fa-solid fa-box-archive text-lg sm:text-xl"></i>
           </div>
         </div>
 
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Currently Borrowed</p>
-            <h3 id="borrowed-count" class="text-2xl font-extrabold text-amber-600 mt-1">0</h3>
+            <h3 id="borrowed-count" class="text-xl sm:text-2xl font-extrabold text-amber-600 mt-1">0</h3>
           </div>
-          <div class="bg-amber-50 p-3 rounded-2xl text-amber-600">
-            <i class="fa-solid fa-book-reader text-xl"></i>
+          <div class="bg-amber-50 p-2.5 sm:p-3 rounded-2xl text-amber-600">
+            <i class="fa-solid fa-book-reader text-lg sm:text-xl"></i>
           </div>
         </div>
       </div>
@@ -146,9 +146,9 @@
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         <!-- Add/Edit Book Form -->
-        <div class="lg:col-span-5 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm h-fit">
+        <div class="lg:col-span-5 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm h-fit">
           <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-            <h3 id="form-title" class="font-extrabold text-base text-slate-900 flex items-center gap-2">
+            <h3 id="form-title" class="font-extrabold text-sm sm:text-base text-slate-900 flex items-center gap-2">
               <i class="fa-solid fa-plus-circle text-indigo-600"></i> Add New Book
             </h3>
             <button id="cancel-btn" type="button" class="hidden text-xs font-bold text-slate-400 hover:text-slate-600 transition">
@@ -156,7 +156,7 @@
             </button>
           </div>
 
-          <form id="book-form" class="space-y-4">
+          <form id="book-form" class="space-y-3.5">
             <input type="hidden" id="book-id" />
 
             <div>
@@ -186,7 +186,7 @@
                     <option value="Non-Fiction">Non-Fiction</option>
                     <option value="__ADD_NEW__">+ Add New Category...</option>
                   </select>
-                  <button type="button" id="quick-add-cat-btn" class="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition" title="Add Main Category">
+                  <button type="button" id="quick-add-cat-btn" class="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition flex-shrink-0" title="Add Main Category">
                     <i class="fa-solid fa-plus"></i>
                   </button>
                 </div>
@@ -199,7 +199,7 @@
                     <option value="">None / Optional</option>
                     <option value="__ADD_NEW__">+ Add New Sub-Genre...</option>
                   </select>
-                  <button type="button" id="quick-add-subcat-btn" class="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition" title="Add Sub-Genre">
+                  <button type="button" id="quick-add-subcat-btn" class="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition flex-shrink-0" title="Add Sub-Genre">
                     <i class="fa-solid fa-plus"></i>
                   </button>
                 </div>
@@ -232,19 +232,19 @@
             </button>
           </form>
 
-          <div class="mt-6 pt-4 border-t border-slate-100">
+          <div class="mt-5 pt-4 border-t border-slate-100">
             <h4 class="text-[11px] font-bold uppercase text-slate-400 mb-2">Category Manager</h4>
             <div id="category-manager-list" class="space-y-1.5 max-h-36 overflow-y-auto pr-1"></div>
           </div>
         </div>
 
         <!-- Inventory Table -->
-        <div class="lg:col-span-7 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
+        <div class="lg:col-span-7 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between">
           <div>
-            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100">
               <div>
-                <h3 class="font-extrabold text-base text-slate-900">Book Inventory</h3>
-                <p class="text-xs text-slate-400">View and manage catalog items</p>
+                <h3 class="font-extrabold text-sm sm:text-base text-slate-900">Book Inventory</h3>
+                <p class="text-[11px] sm:text-xs text-slate-400">View and manage catalog items</p>
               </div>
               <span id="catalog-count-badge" class="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-extrabold rounded-full border border-indigo-100">
                 0 Books
@@ -252,21 +252,21 @@
             </div>
 
             <!-- Filter Pills Bar -->
-            <div class="flex items-center gap-2 overflow-x-auto pb-3 mb-4 no-scrollbar">
+            <div class="flex items-center gap-2 overflow-x-auto pb-3 mb-3 no-scrollbar">
               <div class="cat-pill"></div>
             </div>
 
             <!-- Search Field -->
             <div class="relative mb-4">
               <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-xs"></i>
-              <input type="text" id="search-input" placeholder="Search title, author, category, sub-genre, ISBN..." class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition" />
+              <input type="text" id="search-input" placeholder="Search title, author, category, sub-genre..." class="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600 transition" />
             </div>
 
-            <!-- Inventory Table -->
-            <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse">
+            <!-- Inventory Table Container -->
+            <div class="overflow-x-auto rounded-xl border border-slate-100">
+              <table class="w-full min-w-[600px] text-left border-collapse">
                 <thead>
-                  <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400">
+                  <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50/50">
                     <th class="py-3 px-3">Book Details</th>
                     <th class="py-3 px-2">Genre / Sub-Genre</th>
                     <th class="py-3 px-2 text-center">Copies</th>
@@ -291,17 +291,17 @@
     </div>
 
     <!-- PAGE 2: PENDING REQUESTS -->
-    <div id="page-pending" class="hidden bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+    <div id="page-pending" class="hidden bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
       <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
         <div>
-          <h3 class="font-extrabold text-base text-slate-900">Pending Borrow Requests</h3>
+          <h3 class="font-extrabold text-sm sm:text-base text-slate-900">Pending Borrow Requests</h3>
           <p class="text-xs text-slate-400">Approve or decline student borrowing requests</p>
         </div>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
+      <div class="overflow-x-auto rounded-xl border border-slate-100">
+        <table class="w-full min-w-[600px] text-left border-collapse">
           <thead>
-            <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400">
+            <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50/50">
               <th class="py-3 px-4">Student</th>
               <th class="py-3 px-4">Requested Book</th>
               <th class="py-3 px-3 text-center">Date Requested</th>
@@ -314,20 +314,20 @@
     </div>
 
     <!-- PAGE 3: BORROW RECORDS -->
-    <div id="page-borrowing" class="hidden bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+    <div id="page-borrowing" class="hidden bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div>
-          <h3 class="font-extrabold text-base text-slate-900">Active & Borrowing Records</h3>
+          <h3 class="font-extrabold text-sm sm:text-base text-slate-900">Active & Borrowing Records</h3>
           <p class="text-xs text-slate-400">Monitor loans and transaction history</p>
         </div>
-        <button onclick="exportBorrowingRecordsToCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+        <button onclick="exportBorrowingRecordsToCSV()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 self-start sm:self-auto">
           <i class="fa-solid fa-file-csv"></i> Export CSV
         </button>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
+      <div class="overflow-x-auto rounded-xl border border-slate-100">
+        <table class="w-full min-w-[650px] text-left border-collapse">
           <thead>
-            <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400">
+            <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50/50">
               <th class="py-3 px-4">Student</th>
               <th class="py-3 px-4">Book Title</th>
               <th class="py-3 px-3 text-center">Status</th>
@@ -338,13 +338,13 @@
           <tbody id="all-records-tbody" class="divide-y divide-slate-100 text-xs font-medium"></tbody>
         </table>
       </div>
-      <div class="pt-6 border-t border-slate-100">
+      <div class="pt-5 border-t border-slate-100">
         <div class="flex items-center justify-between mb-3">
           <h4 class="font-extrabold text-xs uppercase tracking-wider text-slate-400">Cancelled Request Logs</h4>
           <button onclick="handleClearCancelledHistory()" class="text-xs text-red-600 hover:underline font-bold">Clear Log</button>
         </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
+        <div class="overflow-x-auto rounded-xl border border-slate-100">
+          <table class="w-full min-w-[500px] text-left border-collapse">
             <tbody id="cancelled-requests-tbody" class="divide-y divide-slate-100 text-xs font-medium"></tbody>
           </table>
         </div>
@@ -352,34 +352,34 @@
     </div>
 
     <!-- PAGE 4: FINES & PAYMENTS -->
-    <div id="page-fines" class="hidden space-y-6">
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+    <div id="page-fines" class="hidden space-y-5 sm:space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Outstanding Fines</p>
-            <h3 id="total-unpaid-fines-display" class="text-2xl font-extrabold text-red-600 mt-1">₱0.00</h3>
+            <h3 id="total-unpaid-fines-display" class="text-xl sm:text-2xl font-extrabold text-red-600 mt-1">₱0.00</h3>
           </div>
-          <div class="bg-red-50 p-3 rounded-2xl text-red-600">
-            <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+          <div class="bg-red-50 p-3 rounded-2xl text-red-600 flex-shrink-0">
+            <i class="fa-solid fa-triangle-exclamation text-lg sm:text-xl"></i>
           </div>
         </div>
-        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+        <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
             <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Settled Collections</p>
-            <h3 id="total-collected-fines-display" class="text-2xl font-extrabold text-emerald-600 mt-1">₱0.00</h3>
+            <h3 id="total-collected-fines-display" class="text-xl sm:text-2xl font-extrabold text-emerald-600 mt-1">₱0.00</h3>
           </div>
-          <div class="bg-emerald-50 p-3 rounded-2xl text-emerald-600">
-            <i class="fa-solid fa-vault text-xl"></i>
+          <div class="bg-emerald-50 p-3 rounded-2xl text-emerald-600 flex-shrink-0">
+            <i class="fa-solid fa-vault text-lg sm:text-xl"></i>
           </div>
         </div>
       </div>
 
-      <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-        <h3 class="font-extrabold text-base text-slate-900 mb-4 pb-3 border-b border-slate-100">Overdue Fine Records</h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
+      <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+        <h3 class="font-extrabold text-sm sm:text-base text-slate-900 mb-4 pb-3 border-b border-slate-100">Overdue Fine Records</h3>
+        <div class="overflow-x-auto rounded-xl border border-slate-100">
+          <table class="w-full min-w-[700px] text-left border-collapse">
             <thead>
-              <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400">
+              <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50/50">
                 <th class="py-3 px-4">Student</th>
                 <th class="py-3 px-4">Book Title</th>
                 <th class="py-3 px-3 text-center">Days Overdue</th>
@@ -395,17 +395,17 @@
     </div>
 
     <!-- PAGE 5: STUDENT DIRECTORY -->
-    <div id="page-students" class="hidden bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+    <div id="page-students" class="hidden bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
       <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
         <div>
-          <h3 class="font-extrabold text-base text-slate-900">Student Directory</h3>
+          <h3 class="font-extrabold text-sm sm:text-base text-slate-900">Student Directory</h3>
           <p class="text-xs text-slate-400">Manage user accounts and privileges</p>
         </div>
       </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse">
+      <div class="overflow-x-auto rounded-xl border border-slate-100">
+        <table class="w-full min-w-[600px] text-left border-collapse">
           <thead>
-            <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400">
+            <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50/50">
               <th class="py-3 px-4">Student ID</th>
               <th class="py-3 px-4">User Details</th>
               <th class="py-3 px-3 text-center">Role / Status</th>
@@ -421,15 +421,15 @@
 
   <!-- Summary Modal -->
   <div id="summary-modal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl relative border border-slate-200">
+    <div class="bg-white rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-xl relative border border-slate-200">
       <button onclick="closeSummaryModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 text-lg transition">
         <i class="fa-solid fa-xmark"></i>
       </button>
       <div class="flex gap-4 mb-4">
-        <div id="modal-cover-container" class="w-20 h-28 flex-shrink-0"></div>
+        <div id="modal-cover-container" class="w-16 sm:w-20 h-24 sm:h-28 flex-shrink-0"></div>
         <div>
-          <span id="modal-book-category" class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">General</span>
-          <h3 id="modal-book-title" class="font-extrabold text-base text-slate-900 mt-1 leading-snug">Book Title</h3>
+          <span id="modal-book-category" class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">General</span>
+          <h3 id="modal-book-title" class="font-extrabold text-sm sm:text-base text-slate-900 mt-1 leading-snug">Book Title</h3>
           <p id="modal-book-author" class="text-xs text-slate-500 font-medium">Author</p>
         </div>
       </div>
