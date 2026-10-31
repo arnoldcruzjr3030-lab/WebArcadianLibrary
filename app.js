@@ -62,6 +62,7 @@ const isLoginPage = path.endsWith("login.html");
 const isAdminPage = path.endsWith("admin-dashboard.html");
 const isStudentPage = path.endsWith("student-dashboard.html");
 const isProfilePage = path.endsWith("profile.html");
+const isBooksPage = path.endsWith("books.html");
 
 // DOM Elements
 const authForm = document.getElementById("auth-form");
@@ -136,6 +137,16 @@ const recordsPrevBtn = document.getElementById("records-prev-btn");
 const recordsNextBtn = document.getElementById("records-next-btn");
 const recordsPageInfo = document.getElementById("records-page-info");
 
+// DOM Elements for Dedicated Books Directory Page (books.html)
+const booksGrid = document.getElementById("books-grid");
+const genreCategorySelect = document.getElementById("genre-category-select");
+const subgenreSearchInput = document.getElementById("subgenre-search-input");
+const bookSearchInput = document.getElementById("book-search-input");
+const resetGenreFilterBtn = document.getElementById("reset-genre-filter-btn");
+const genreQuickList = document.getElementById("genre-quick-list");
+const filteredCountBadge = document.getElementById("filtered-count-badge");
+const totalBooksCounter = document.getElementById("total-books-counter");
+
 // Profile DOM Elements
 const profileNameDisplay = document.getElementById("profile-name-display");
 const profileEmailDisplay = document.getElementById("profile-email-display");
@@ -195,6 +206,7 @@ let currentUserRole = "student";
 let currentUserApproved = false;
 let currentUserName = "";
 let activeCategoryFilter = "ALL";
+let selectedMainGenre = "ALL";
 
 // Semester & Calendar State
 let activeSemesterCode = "";
@@ -240,6 +252,12 @@ function escapeQuotes(str) {
   return str ? String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;') : '';
 }
 
+function escapeHtml(str) {
+  return str ? String(str).replace(/[&<>"']/g, function(m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+  }) : '';
+}
+
 function renderBookCoverHTML(imageUrl, title, category, extraClass = "w-12 h-16") {
   if (imageUrl && imageUrl.trim() !== "") {
     return `
@@ -258,6 +276,162 @@ function renderFallbackCoverHTML(title, category, extraClass = "w-12 h-16") {
       <span class="text-[8px] font-semibold text-indigo-200 line-clamp-1 mt-0.5">${escapeHtml(category || 'General')}</span>
     </div>
   `;
+}
+
+// Dedicated Books Catalog Page Functions (books.html)
+function renderBooksCatalogGrid(books) {
+  if (!booksGrid) return;
+
+  const searchTerm = bookSearchInput ? bookSearchInput.value.toLowerCase().trim() : "";
+  const subGenreTerm = subgenreSearchInput ? subgenreSearchInput.value.toLowerCase().trim() : "";
+
+  const filtered = books.filter(b => {
+    const matchesKeyword = 
+      !searchTerm ||
+      b.title.toLowerCase().includes(searchTerm) ||
+      b.author.toLowerCase().includes(searchTerm) ||
+      (b.isbn && b.isbn.includes(searchTerm)) ||
+      (b.summary && b.summary.toLowerCase().includes(searchTerm));
+
+    const matchesMainGenre = 
+      selectedMainGenre === "ALL" || 
+      (b.category && b.category.toLowerCase().trim() === selectedMainGenre.toLowerCase().trim());
+
+    const matchesSubGenre = 
+      !subGenreTerm || 
+      (b.subCategory && b.subCategory.toLowerCase().includes(subGenreTerm));
+
+    return matchesKeyword && matchesMainGenre && matchesSubGenre;
+  });
+
+  if (totalBooksCounter) totalBooksCounter.textContent = books.length;
+  if (filteredCountBadge) filteredCountBadge.textContent = `Showing ${filtered.length} Books`;
+
+  if (filtered.length === 0) {
+    booksGrid.innerHTML = `
+      <div class="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <i class="fa-solid fa-book-open-reader text-3xl mb-2 opacity-50"></i>
+        <p class="font-medium">No books found matching the selected genre and search criteria.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const isAdmin = currentUserRole === "admin";
+
+  booksGrid.innerHTML = filtered.map(book => {
+    const isAvailable = book.available > 0;
+    const isBookmarked = studentBookmarkedMap.has(book.id);
+
+    return `
+      <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md transition space-y-3">
+        <div>
+          <div class="flex items-center justify-between gap-1.5 mb-2.5 flex-wrap">
+            <div class="flex items-center gap-1 flex-wrap">
+              <span class="px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                ${escapeHtml(book.category || 'General')}
+              </span>
+              ${book.subCategory ? `
+                <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200">
+                  ${escapeHtml(book.subCategory)}
+                </span>
+              ` : ''}
+            </div>
+
+            <button onclick="handleToggleBookmark('${book.id}')" class="text-xs p-1.5 rounded-lg transition ${isBookmarked ? 'text-red-600 bg-red-50' : 'text-slate-400 hover:text-red-500 bg-slate-50'}" title="${isBookmarked ? 'Remove Bookmark' : 'Bookmark Book'}">
+              <i class="${isBookmarked ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+            </button>
+          </div>
+
+          <div class="flex gap-3">
+            ${renderBookCoverHTML(book.coverUrl, book.title, book.category, "w-16 h-24")}
+            <div class="flex-1 min-w-0">
+              <h4 class="font-bold text-slate-900 text-sm line-clamp-2 leading-snug">${escapeHtml(book.title)}</h4>
+              <p class="text-xs text-slate-500 font-medium mt-1">by ${escapeHtml(book.author)}</p>
+              ${book.isbn ? `<p class="text-[10px] text-slate-400 font-mono mt-0.5">ISBN: ${escapeHtml(book.isbn)}</p>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs gap-2">
+          <span class="font-bold ${isAvailable ? 'text-emerald-600' : 'text-red-500'}">
+            ${isAvailable ? `${book.available} Available` : 'Out of Stock'}
+          </span>
+
+          <div class="flex items-center gap-1.5">
+            <button onclick="openSummaryModal('${escapeQuotes(book.title)}', '${escapeQuotes(book.author)}', '${escapeQuotes(book.summary)}', '${escapeQuotes(book.category)}', '${escapeQuotes(book.coverUrl)}', '${escapeQuotes(book.subCategory || '')}')" class="px-2.5 py-1.5 rounded-lg font-semibold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+              Preview
+            </button>
+            ${!isAdmin ? `
+              <button onclick="handleBorrowAction('${book.id}', ${book.available})" class="px-3 py-1.5 rounded-lg font-semibold text-xs transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}" ${!isAvailable ? 'disabled' : ''}>
+                Request
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function populateGenreFilters(books) {
+  if (!genreCategorySelect) return;
+
+  const categories = new Set();
+  books.forEach(b => {
+    if (b.category && b.category.trim() !== "") {
+      categories.add(b.category.trim());
+    }
+  });
+
+  const sortedCategories = Array.from(categories).sort();
+
+  genreCategorySelect.innerHTML = `<option value="ALL">All Genres</option>` + 
+    sortedCategories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join("");
+
+  if (genreQuickList) {
+    genreQuickList.innerHTML = sortedCategories.map(cat => `
+      <button onclick="selectGenreQuickFilter('${escapeQuotes(cat)}')" class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition flex items-center justify-between">
+        <span>${escapeHtml(cat)}</span>
+        <i class="fa-solid fa-chevron-right text-[10px] opacity-40"></i>
+      </button>
+    `).join("");
+  }
+}
+
+window.selectGenreQuickFilter = (genreName) => {
+  selectedMainGenre = genreName;
+  if (genreCategorySelect) genreCategorySelect.value = genreName;
+  renderBooksCatalogGrid(allBooks);
+};
+
+if (genreCategorySelect) {
+  genreCategorySelect.addEventListener("change", (e) => {
+    selectedMainGenre = e.target.value;
+    renderBooksCatalogGrid(allBooks);
+  });
+}
+
+if (subgenreSearchInput) {
+  subgenreSearchInput.addEventListener("input", () => {
+    renderBooksCatalogGrid(allBooks);
+  });
+}
+
+if (bookSearchInput) {
+  bookSearchInput.addEventListener("input", () => {
+    renderBooksCatalogGrid(allBooks);
+  });
+}
+
+if (resetGenreFilterBtn) {
+  resetGenreFilterBtn.addEventListener("click", () => {
+    selectedMainGenre = "ALL";
+    if (genreCategorySelect) genreCategorySelect.value = "ALL";
+    if (subgenreSearchInput) subgenreSearchInput.value = "";
+    if (bookSearchInput) bookSearchInput.value = "";
+    renderBooksCatalogGrid(allBooks);
+  });
 }
 
 // Interactive Admin Calendar Logic
@@ -348,7 +522,6 @@ window.handleSaveSemesterDates = () => {
   renderAdminCalendar();
 };
 
-// Sync Semester Dropdowns Across Configurator & Fine Filter
 function syncSemesterDropdowns(newSemCode, newSemName) {
   const filterSelect = document.getElementById("fine-semester-filter");
   const configSelect = document.getElementById("config-sem-select");
@@ -356,7 +529,6 @@ function syncSemesterDropdowns(newSemCode, newSemName) {
   [filterSelect, configSelect].forEach(select => {
     if (!select) return;
 
-    // Remove "No semesters" placeholder if present
     const dummyOpt = select.querySelector('option[value=""]');
     if (dummyOpt) dummyOpt.remove();
 
@@ -376,7 +548,6 @@ function syncSemesterDropdowns(newSemCode, newSemName) {
   });
 }
 
-// Add New Academic Semester
 window.handleAddNewSemesterPrompt = () => {
   const semName = prompt("Enter new semester display label (e.g. 1st Sem AY 2026-2027):");
   if (!semName || !semName.trim()) return;
@@ -396,7 +567,6 @@ window.handleAddNewSemesterPrompt = () => {
   alert(`Semester "${trimmedName}" added successfully!`);
 };
 
-// Edit Currently Selected Semester Name
 window.handleEditCurrentSemesterPrompt = () => {
   const filterSelect = document.getElementById("fine-semester-filter");
   if (!filterSelect) return;
@@ -426,7 +596,6 @@ window.handleEditCurrentSemesterPrompt = () => {
   }
 };
 
-// Remove/Delete Currently Selected Semester
 window.handleRemoveCurrentSemesterPrompt = () => {
   const filterSelect = document.getElementById("fine-semester-filter");
   if (!filterSelect) return;
@@ -463,7 +632,6 @@ window.handleRemoveCurrentSemesterPrompt = () => {
   }
 };
 
-// Modal View Handler Attached to Window Scope
 window.openSummaryModal = (title, author, summaryText, category = "General", imageUrl = "", subCategory = "") => {
   const modal = document.getElementById("summary-modal");
   const modalTitle = document.getElementById("modal-book-title");
@@ -495,7 +663,6 @@ window.closeSummaryModal = () => {
   if (modal) modal.classList.add("hidden");
 };
 
-// Render Popular / Frequently Borrowed Section
 function renderTopBooks(books) {
   if (!topBooksContainer) return;
 
@@ -569,7 +736,6 @@ function renderTopBooks(books) {
   }).join("");
 }
 
-// Sync User Profile Details & Header Display
 async function syncUserProfile(user, inputStudentId = "", firstName = "", lastName = "") {
   const userRef = doc(db, "users", user.uid);
   const userSnap = await getDoc(userRef);
@@ -693,7 +859,6 @@ onAuthStateChanged(auth, async (user) => {
   listenToBookCollection();
 });
 
-// Profile Full Name Editing
 async function loadStudentProfileDetails(user) {
   if (profileEmailDisplay) profileEmailDisplay.textContent = user.email;
 
@@ -785,7 +950,6 @@ async function loadStudentProfileDetails(user) {
   });
 }
 
-// Student Active Borrowings Table with Pagination
 function listenToStudentBorrowedBooks(userId) {
   if (unsubscribeBorrowedSnapshot) unsubscribeBorrowedSnapshot();
 
@@ -810,6 +974,7 @@ function listenToStudentBorrowedBooks(userId) {
 
     renderMyBorrowedTable();
     renderBookTable(allBooks);
+    renderBooksCatalogGrid(allBooks);
   });
 }
 
@@ -897,7 +1062,6 @@ if (myBorrowNextBtn) {
   });
 }
 
-// Student Bookmarks Real-Time & Pagination
 function listenToUserBookmarks(userId) {
   if (unsubscribeBookmarksSnapshot) unsubscribeBookmarksSnapshot();
 
@@ -920,6 +1084,7 @@ function listenToUserBookmarks(userId) {
     renderBookmarksTable(userBookmarkList, profileBookmarksTbody, null, null, null);
     renderBookTable(allBooks);
     renderTopBooks(allBooks);
+    renderBooksCatalogGrid(allBooks);
   });
 }
 
@@ -996,7 +1161,6 @@ if (myBookmarksNextBtn) {
   });
 }
 
-// Render Profile Borrowing History Table
 function renderProfileHistoryTable() {
   if (!profileHistoryTbody) return;
 
@@ -1071,7 +1235,6 @@ if (profileHistoryNextBtn) {
   });
 }
 
-// Registered Students Directory in Admin Dashboard
 async function loadRegisteredStudents() {
   if (!studentTbody) return;
 
@@ -1120,7 +1283,6 @@ async function loadRegisteredStudents() {
   }
 }
 
-// Render Borrowing History Table for Admin Dashboard
 function renderStudentRecordsTable() {
   if (!allRecordsTbody) return;
 
@@ -1187,7 +1349,6 @@ function renderStudentRecordsTable() {
   }).join("");
 }
 
-// Toggle Bookmark / Favorite Action
 window.handleToggleBookmark = async (bookId) => {
   if (!auth.currentUser) {
     alert("Please sign in or register to bookmark favorite books.");
@@ -1221,12 +1382,12 @@ window.handleToggleBookmark = async (bookId) => {
 
     renderTopBooks(allBooks);
     renderBookTable(allBooks);
+    renderBooksCatalogGrid(allBooks);
   } catch (err) {
     alert("Failed to update bookmark: " + err.message);
   }
 };
 
-// CSV Export Handler
 window.exportBorrowingRecordsToCSV = () => {
   if (activeStudentRecords.length === 0) {
     alert("No borrowing records available to export.");
@@ -1264,7 +1425,6 @@ window.exportBorrowingRecordsToCSV = () => {
   document.body.removeChild(link);
 };
 
-// Email Notification
 window.handleSendEmailNotification = async (userEmail, bookTitle, dueDateStr, fineAmount = 0) => {
   const isOverdue = fineAmount > 0;
   const subject = isOverdue ? `[Arcadian Library] OVERDUE NOTICE: "${bookTitle}"` : `[Arcadian Library] Due Date Reminder: "${bookTitle}"`;
@@ -1290,7 +1450,6 @@ window.handleSendEmailNotification = async (userEmail, bookTitle, dueDateStr, fi
   }
 };
 
-// Toggle Password Visibility
 if (togglePasswordVisibilityBtn && authPassword && passwordEyeIcon) {
   togglePasswordVisibilityBtn.addEventListener("click", () => {
     const isPassword = authPassword.getAttribute("type") === "password";
@@ -1305,7 +1464,6 @@ if (togglePasswordVisibilityBtn && authPassword && passwordEyeIcon) {
   });
 }
 
-// Admin Navigation Tab Switcher
 function switchAdminTab(targetTab) {
   const tabs = ["catalog", "pending", "borrowing", "fines", "students"];
 
@@ -1328,7 +1486,6 @@ function switchAdminTab(targetTab) {
   document.getElementById(`tab-btn-${tab}`)?.addEventListener("click", () => switchAdminTab(tab));
 });
 
-// Category Pills & Management
 function renderCategoryPills(books) {
   const genresSet = new Set();
   books.forEach(b => {
@@ -1411,7 +1568,6 @@ window.handleDeleteCategory = async (categoryToDelete) => {
   }
 };
 
-// Main Category Quick Add
 function promptAddNewCategory() {
   if (!categoryInput) return;
   const newCat = prompt("Enter new category name:");
@@ -1438,7 +1594,6 @@ function promptAddNewCategory() {
   }
 }
 
-// Sub-Genre Quick Add Function
 function promptAddNewSubCategory() {
   if (!subCategoryInput) return;
   const newSubCat = prompt("Enter new sub-genre name:");
@@ -1480,7 +1635,6 @@ if (quickAddCatBtn) {
   quickAddCatBtn.addEventListener("click", promptAddNewCategory);
 }
 
-// Sub-Genre Event Listeners
 if (subCategoryInput) {
   subCategoryInput.addEventListener("change", (e) => {
     if (e.target.value === "__ADD_NEW__") {
@@ -1508,7 +1662,6 @@ function populateCategoriesFromBooks(books) {
   });
 }
 
-// Auth Handlers
 if (isLoginPage) {
   if (forgotPasswordLink) {
     forgotPasswordLink.addEventListener("click", async () => {
@@ -1643,7 +1796,6 @@ if (logoutBtn) {
   });
 }
 
-// Listen to all student records
 function listenToAllStudentRecords() {
   if (unsubscribeAllRecordsSnapshot) unsubscribeAllRecordsSnapshot();
 
@@ -1670,7 +1822,6 @@ function listenToAllStudentRecords() {
   });
 }
 
-// Render Cancelled Requests History Table
 function renderCancelledRequestsTable() {
   if (!cancelledRequestsTbody) return;
 
@@ -1703,7 +1854,6 @@ function renderCancelledRequestsTable() {
   }).join("");
 }
 
-// Clear Entire Cancelled Request History
 window.handleClearCancelledHistory = async () => {
   if (cancelledStudentRecords.length === 0) {
     alert("Cancelled history is already empty.");
@@ -1721,7 +1871,6 @@ window.handleClearCancelledHistory = async () => {
   }
 };
 
-// Render Fines & Payments Table with Semester Filtering & OTC Actions
 function renderFinesTable() {
   if (!finesRecordsTbody) return;
 
@@ -1737,7 +1886,6 @@ function renderFinesTable() {
     const dueDateObj = rec.dueDate ? new Date(rec.dueDate.seconds * 1000) : null;
     const fineDetails = calculateOverdueFine(dueDateObj);
 
-    // Academic Semester Filter
     if (semesterFilter !== "ALL" && rec.semester !== semesterFilter) {
       return;
     }
@@ -1796,7 +1944,6 @@ function renderFinesTable() {
   }
 }
 
-// Mark Over-the-Counter Fine Paid
 window.handleMarkFinePaid = async (recordId, fineAmount) => {
   if (confirm(`Confirm cash payment of ₱${fineAmount}.00 over the counter at the school library?`)) {
     try {
@@ -1813,7 +1960,6 @@ window.handleMarkFinePaid = async (recordId, fineAmount) => {
   }
 };
 
-// Clear Individual Fine Record Action
 window.handleClearFineRecord = async (recordId) => {
   if (currentUserRole !== "admin") {
     alert("Only Admins can clear fine records.");
@@ -1830,7 +1976,6 @@ window.handleClearFineRecord = async (recordId) => {
   }
 };
 
-// Reset Total Collections Display Counter
 window.handleResetCollections = () => {
   if (confirm("Reset total settled collections display counter for this session?")) {
     const totalCollectedDisplay = document.getElementById("total-collected-fines-display");
@@ -1839,7 +1984,6 @@ window.handleResetCollections = () => {
   }
 };
 
-// Print / View Printable Over-the-Counter Receipt
 window.handlePrintFineReceipt = (studentId, userEmail, bookTitle, fineAmount) => {
   const receiptWindow = window.open("", "_blank", "width=600,height=600");
   const printContent = `
@@ -1879,7 +2023,6 @@ window.handlePrintFineReceipt = (studentId, userEmail, bookTitle, fineAmount) =>
   receiptWindow.document.close();
 };
 
-// Export Fines History to CSV
 window.exportFinesToCSV = () => {
   if (activeStudentRecords.length === 0) {
     alert("No fine records available to export.");
@@ -1931,7 +2074,6 @@ window.handleRemoveBorrowRecord = async (recordId) => {
   }
 };
 
-// Admin Self-Stepping Down Role Handler
 window.handleLeaveAdminRole = async () => {
   const user = auth.currentUser;
   if (!user) return;
@@ -1990,7 +2132,6 @@ window.handleSendUserPasswordReset = async (userEmail) => {
   }
 };
 
-// Admin Password Reset
 if (adminResetPwdBtn) {
   adminResetPwdBtn.addEventListener("click", async () => {
     const user = auth.currentUser;
@@ -2063,7 +2204,6 @@ function listenToPendingBorrowRequests() {
   });
 }
 
-// Student Cancel Pending Request Handler
 window.handleCancelMyRequest = async (requestId, bookId) => {
   if (confirm("Are you sure you want to cancel this pending borrow request?")) {
     try {
@@ -2078,6 +2218,7 @@ window.handleCancelMyRequest = async (requestId, bookId) => {
       });
 
       renderBookTable(allBooks);
+      renderBooksCatalogGrid(allBooks);
       alert("Borrow request cancelled!");
     } catch (err) {
       alert("Failed to cancel request: " + err.message);
@@ -2107,6 +2248,10 @@ function listenToBookCollection() {
     renderCategoryPills(allBooks);
     renderTopBooks(allBooks);
     renderBookTable(allBooks);
+    
+    // Sync Dedicated Books Directory Page (books.html)
+    populateGenreFilters(allBooks);
+    renderBooksCatalogGrid(allBooks);
   }, (error) => {
     console.error("Firestore Listen Error:", error);
   });
@@ -2243,12 +2388,6 @@ if (catalogNextBtn) {
   });
 }
 
-function escapeHtml(str) {
-  return str ? String(str).replace(/[&<>"']/g, function(m) {
-    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
-  }) : '';
-}
-
 function updateDashboardStats(books) {
   let totalCopies = 0;
   let availableCopies = 0;
@@ -2366,7 +2505,6 @@ function resetForm() {
 
 if (cancelBtn) cancelBtn.addEventListener("click", resetForm);
 
-// Dynamic Student Request Borrow Action Tagged with Active Semester Code
 window.handleBorrowAction = async (bookId, currentAvailable) => {
   if (!auth.currentUser) {
     alert("Please sign in or register to submit borrowing requests.");
@@ -2521,7 +2659,6 @@ if (searchInput) {
   });
 }
 
-// Render Admin Interactive Calendar on DOM Load
 document.addEventListener("DOMContentLoaded", () => {
   renderAdminCalendar();
 });
