@@ -17,7 +17,7 @@
 </head>
 <body class="bg-slate-50 font-sans min-h-screen text-slate-800 flex flex-col selection:bg-indigo-500 selection:text-white">
 
-  <!-- Header Navigation -->
+  <!-- Header Navigation with Admin Full Name Display -->
   <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50 shadow-md">
     <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-3 flex flex-wrap justify-between items-center gap-2">
       
@@ -50,7 +50,7 @@
           </a>
         </div>
 
-        <!-- User Info & Sign Out (FIXED FOR MOBILE VISIBILITY) -->
+        <!-- User Info with Full Name & Role Badge -->
         <div id="user-profile" class="flex items-center justify-between gap-3 w-full sm:w-auto p-2 sm:p-0 bg-slate-800/80 sm:bg-transparent rounded-xl sm:rounded-none border border-slate-700/80 sm:border-0">
           <div id="user-email-display" class="text-xs text-slate-200 font-semibold flex items-center gap-2 flex-wrap min-w-0">
             <span>Loading...</span>
@@ -310,7 +310,7 @@
         <table class="w-full min-w-[580px] text-left border-collapse">
           <thead>
             <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50/50">
-              <th class="py-3 px-4">Student</th>
+              <th class="py-3 px-4">Student Details</th>
               <th class="py-3 px-4">Requested Book</th>
               <th class="py-3 px-3 text-center">Date Requested</th>
               <th class="py-3 px-4 text-center">Action</th>
@@ -326,7 +326,7 @@
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div>
           <h3 class="font-bold text-sm sm:text-base text-slate-900">Active & Borrowing Records</h3>
-          <p class="text-xs text-slate-400">Monitor loans and transaction history</p>
+          <p class="text-xs text-slate-400">Monitor loans and transaction history with full student names</p>
         </div>
         <button onclick="exportBorrowingRecordsToCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 self-start sm:self-auto min-h-[40px]">
           <i class="fa-solid fa-file-csv"></i> Export CSV
@@ -336,7 +336,7 @@
         <table class="w-full min-w-[620px] text-left border-collapse">
           <thead>
             <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50/50">
-              <th class="py-3 px-4">Student</th>
+              <th class="py-3 px-4">Student Details</th>
               <th class="py-3 px-4">Book Title</th>
               <th class="py-3 px-3 text-center">Status</th>
               <th class="py-3 px-3 text-center">Due Date</th>
@@ -388,7 +388,7 @@
           <table class="w-full min-w-[650px] text-left border-collapse">
             <thead>
               <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50/50">
-                <th class="py-3 px-4">Student</th>
+                <th class="py-3 px-4">Student Details</th>
                 <th class="py-3 px-4">Book Title</th>
                 <th class="py-3 px-3 text-center">Days Overdue</th>
                 <th class="py-3 px-3 text-center">Fine Amount</th>
@@ -407,15 +407,16 @@
       <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
         <div>
           <h3 class="font-bold text-sm sm:text-base text-slate-900">Student Directory</h3>
-          <p class="text-xs text-slate-400">Manage user accounts and privileges</p>
+          <p class="text-xs text-slate-400">Manage user accounts, full names, and privileges</p>
         </div>
+        <span id="student-count-badge" class="bg-slate-100 text-slate-800 text-xs font-bold px-3 py-1 rounded-full">0 Accounts</span>
       </div>
       <div class="overflow-x-auto rounded-xl border border-slate-100">
         <table class="w-full min-w-[580px] text-left border-collapse">
           <thead>
             <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50/50">
               <th class="py-3 px-4">Student ID</th>
-              <th class="py-3 px-4">User Details</th>
+              <th class="py-3 px-4">Full Name & Email Details</th>
               <th class="py-3 px-3 text-center">Role / Status</th>
               <th class="py-3 px-4 text-center">Account Actions</th>
             </tr>
