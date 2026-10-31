@@ -13,7 +13,7 @@ import {
   onSnapshot, 
   updateDoc, 
   deleteDoc 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
