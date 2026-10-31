@@ -213,6 +213,42 @@
 
   </main>
 
+  <!-- Expanded Book Summary & Image Modal Popup -->
+  <div id="summary-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3.5 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-4 sm:p-6 space-y-4 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col justify-between">
+      <div class="space-y-4 overflow-y-auto">
+        <div class="flex justify-between items-start border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-3">
+            <div id="modal-cover-container" class="w-14 h-20 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200">
+              <!-- Dynamic Image or Fallback -->
+            </div>
+            <div>
+              <h3 id="modal-book-title" class="text-sm sm:text-lg font-bold text-slate-900 leading-tight">Book Title</h3>
+              <p id="modal-book-author" class="text-xs text-slate-500 font-medium mt-0.5">by Author</p>
+              <span id="modal-book-category" class="inline-block mt-1 px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">Category</span>
+            </div>
+          </div>
+          <button onclick="closeSummaryModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg text-lg flex-shrink-0">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-600 mb-1">Book Summary & Overview</h4>
+          <p id="modal-book-summary" class="text-xs text-slate-600 leading-relaxed whitespace-pre-line bg-slate-50 p-3.5 rounded-xl border border-slate-100 max-h-60 overflow-y-auto">
+            No summary available.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-100">
+        <button onclick="closeSummaryModal()" class="w-full sm:w-auto min-h-[42px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition">
+          Close Preview
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="app.js"></script>
 </body>
 </html>
