@@ -14,10 +14,10 @@
 
   <!-- Header Navigation -->
   <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-md">
-    <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-3 flex flex-wrap justify-between items-center gap-2">
+    <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-3 flex justify-between items-center relative">
       
       <!-- Brand Logo -->
-      <a href="index.html" class="flex items-center space-x-2.5 sm:space-x-3">
+      <a href="index.html" class="flex items-center space-x-2.5 sm:space-x-3 z-10">
         <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-md shadow-indigo-900/50 flex-shrink-0">
           <i class="fa-solid fa-book-open"></i>
         </div>
@@ -28,38 +28,40 @@
       </a>
 
       <!-- Mobile Menu Toggle Button -->
-      <button id="mobile-menu-btn" onclick="document.getElementById('user-nav').classList.toggle('hidden')" class="sm:hidden p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg focus:outline-none" aria-label="Toggle Navigation">
+      <button id="mobile-menu-btn" onclick="document.getElementById('user-nav').classList.toggle('hidden')" class="sm:hidden p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-xl focus:outline-none transition z-10" aria-label="Toggle Navigation">
         <i class="fa-solid fa-bars text-lg"></i>
       </button>
 
-      <!-- Right Navigation Actions -->
-      <div id="user-nav" class="hidden sm:flex w-full sm:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-800 transition-all duration-200">
+      <!-- Mobile Drawer Navigation & Desktop Navbar -->
+      <div id="user-nav" class="hidden sm:flex absolute sm:static top-full left-0 w-full sm:w-auto bg-slate-900/98 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border-b sm:border-0 border-slate-800 p-4 sm:p-0 flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 transition-all duration-200 shadow-xl sm:shadow-none">
         
-        <a href="books.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 border border-slate-700">
+        <a href="books.html" class="bg-slate-800/90 hover:bg-slate-700 text-slate-200 px-4 py-3 sm:py-1.5 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 border border-slate-700/80 min-h-[42px] sm:min-h-0">
           <i class="fa-solid fa-books text-indigo-400"></i> Browse All Books
         </a>
 
-        <a id="login-nav-btn" href="login.html" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
+        <a id="login-nav-btn" href="login.html" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 sm:py-1.5 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2 shadow-sm min-h-[42px] sm:min-h-0">
           <i class="fa-solid fa-right-to-bracket"></i> Sign In / Register
         </a>
 
         <!-- Logged-in Navigation Profile with Full Name & Role Badge -->
-        <div id="user-profile" class="hidden flex-col sm:flex-row items-stretch sm:items-center justify-between sm:justify-start gap-2.5 w-full sm:w-auto pt-2 sm:pt-0">
-          <div class="flex items-center gap-2 w-full sm:w-auto">
-            <a id="dashboard-portal-btn" href="student-dashboard.html" class="flex-1 sm:flex-none justify-center bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 border border-slate-700">
-              <i class="fa-solid fa-table-columns"></i> Dashboard
+        <div id="user-profile" class="hidden flex-col sm:flex-row items-stretch sm:items-center justify-between sm:justify-start gap-2.5 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800">
+          
+          <div class="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+            <a id="dashboard-portal-btn" href="student-dashboard.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2.5 sm:py-1.5 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 border border-slate-700 min-h-[40px] sm:min-h-0">
+              <i class="fa-solid fa-table-columns text-indigo-400"></i> Dashboard
             </a>
-            <a href="profile.html" class="flex-1 sm:flex-none justify-center bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 border border-slate-700">
-              <i class="fa-solid fa-user"></i> Profile
+            <a href="profile.html" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2.5 sm:py-1.5 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 border border-slate-700 min-h-[40px] sm:min-h-0">
+              <i class="fa-solid fa-user text-indigo-400"></i> Profile
             </a>
           </div>
 
-          <div class="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
-            <span id="user-email-display" class="text-xs text-slate-300 font-medium truncate max-w-[220px] sm:max-w-none flex items-center gap-1.5"></span>
-            <button id="logout-btn" class="bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 border border-slate-700 flex-shrink-0" title="Logout">
+          <div class="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto pt-2.5 sm:pt-0 border-t sm:border-t-0 border-slate-800/80 bg-slate-950/40 sm:bg-transparent p-2.5 sm:p-0 rounded-xl sm:rounded-none">
+            <span id="user-email-display" class="text-xs text-slate-300 font-medium truncate max-w-[200px] sm:max-w-none flex items-center gap-1.5"></span>
+            <button id="logout-btn" class="bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white px-3.5 py-2 sm:py-1.5 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5 border border-slate-700 flex-shrink-0 min-h-[38px] sm:min-h-0" title="Logout">
               <i class="fa-solid fa-right-from-bracket"></i> Logout
             </button>
           </div>
+
         </div>
 
       </div>
