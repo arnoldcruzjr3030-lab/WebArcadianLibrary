@@ -287,7 +287,7 @@ window.closeSummaryModal = () => {
   if (modal) modal.classList.add("hidden");
 };
 
-// Render Popular / Frequently Borrowed Section (Summary hidden, viewable only in Preview)
+// Render Popular / Frequently Borrowed Section
 function renderTopBooks(books) {
   if (!topBooksContainer) return;
 
@@ -1513,12 +1513,13 @@ window.handleClearCancelledHistory = async () => {
   }
 };
 
-// Render Fines & Payments Table
+// Render Fines & Payments Table with Semester Filtering & OTC Actions
 function renderFinesTable() {
   if (!finesRecordsTbody) return;
 
   const totalUnpaidDisplay = document.getElementById("total-unpaid-fines-display");
   const totalCollectedDisplay = document.getElementById("total-collected-fines-display");
+  const semesterFilter = document.getElementById("fine-semester-filter")?.value || "ALL";
 
   let totalUnpaid = 0;
   let totalCollected = 0;
@@ -1527,6 +1528,12 @@ function renderFinesTable() {
   activeStudentRecords.forEach((rec) => {
     const dueDateObj = rec.dueDate ? new Date(rec.dueDate.seconds * 1000) : null;
     const fineDetails = calculateOverdueFine(dueDateObj);
+
+    // Academic Semester Tagging
+    const recordSem = rec.semester || "2025-2";
+    if (semesterFilter !== "ALL" && recordSem !== semesterFilter) {
+      return;
+    }
 
     if (fineDetails.isOverdue || rec.finePaid) {
       const currentFine = rec.finePaid ? (rec.fineAmountPaid || 0) : fineDetails.fineAmount;
@@ -1547,16 +1554,25 @@ function renderFinesTable() {
           <td class="py-3 px-3 text-center font-bold text-slate-700">${fineDetails.daysLate} Day(s)</td>
           <td class="py-3 px-3 text-center font-bold text-red-600">₱${currentFine.toFixed(2)}</td>
           <td class="py-3 px-3 text-center">
-            <span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full ${rec.finePaid ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">
-              ${rec.finePaid ? 'Paid (Cash)' : 'Unpaid'}
+            <span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full ${rec.finePaid ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-red-100 text-red-800 border border-red-200'}">
+              ${rec.finePaid ? 'Paid (Over-the-Counter)' : 'Unpaid'}
             </span>
           </td>
           <td class="py-3 px-4 text-center">
-            ${!rec.finePaid ? `
-              <button onclick="handleMarkFinePaid('${rec.id}', ${currentFine})" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm">
-                <i class="fa-solid fa-money-bill-wave mr-1"></i> Mark Paid (Cash)
+            <div class="flex justify-center items-center gap-1.5 flex-wrap">
+              ${!rec.finePaid ? `
+                <button onclick="handleMarkFinePaid('${rec.id}', ${currentFine})" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition shadow-sm" title="Accept Cash at School Library">
+                  <i class="fa-solid fa-money-bill-wave mr-1"></i> Pay OTC
+                </button>
+              ` : `
+                <button onclick="handlePrintFineReceipt('${escapeQuotes(rec.studentId)}', '${escapeQuotes(rec.userEmail)}', '${escapeQuotes(rec.bookTitle)}', ${currentFine})" class="px-2 py-1 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition" title="Print Over-the-Counter Cash Receipt">
+                  <i class="fa-solid fa-print"></i> Receipt
+                </button>
+              `}
+              <button onclick="handleClearFineRecord('${rec.id}')" class="px-2 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition" title="Clear Record">
+                <i class="fa-solid fa-trash-can"></i>
               </button>
-            ` : `<span class="text-xs text-slate-400 italic">Settled</span>`}
+            </div>
           </td>
         </tr>
       `;
@@ -1567,26 +1583,130 @@ function renderFinesTable() {
   if (totalCollectedDisplay) totalCollectedDisplay.textContent = `₱${totalCollected.toFixed(2)}`;
 
   if (fineRowsHtml === '') {
-    finesRecordsTbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400 font-medium">No overdue fines or payment records found.</td></tr>`;
+    finesRecordsTbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-slate-400 font-medium">No overdue fines or payment records found for the selected filter.</td></tr>`;
   } else {
     finesRecordsTbody.innerHTML = fineRowsHtml;
   }
 }
 
-// Mark Fine Paid
+// Mark Over-the-Counter Fine Paid
 window.handleMarkFinePaid = async (recordId, fineAmount) => {
-  if (confirm(`Confirm cash payment of ₱${fineAmount}.00 for this overdue item?`)) {
+  if (confirm(`Confirm cash payment of ₱${fineAmount}.00 over the counter at the school library?`)) {
     try {
       await updateDoc(doc(db, "borrowed_books", recordId), {
         finePaid: true,
         fineAmountPaid: fineAmount,
-        paymentMethod: "Cash"
+        paymentMethod: "Over-the-Counter Cash",
+        paidAt: new Date()
       });
-      alert("Cash payment successfully recorded!");
+      alert("Over-the-counter cash payment recorded successfully!");
     } catch (err) {
       alert("Payment recording failed: " + err.message);
     }
   }
+};
+
+// Clear Individual Fine Record Action
+window.handleClearFineRecord = async (recordId) => {
+  if (currentUserRole !== "admin") {
+    alert("Only Admins can clear fine records.");
+    return;
+  }
+
+  if (confirm("Are you sure you want to clear/delete this fine record?")) {
+    try {
+      await deleteDoc(doc(db, "borrowed_books", recordId));
+      alert("Fine record cleared successfully.");
+    } catch (err) {
+      alert("Failed to clear fine record: " + err.message);
+    }
+  }
+};
+
+// Reset Total Collections Display Counter
+window.handleResetCollections = () => {
+  if (confirm("Reset total settled collections display counter for this session?")) {
+    const totalCollectedDisplay = document.getElementById("total-collected-fines-display");
+    if (totalCollectedDisplay) totalCollectedDisplay.textContent = "₱0.00";
+    alert("Settled collections total counter reset.");
+  }
+};
+
+// Print / View Printable Over-the-Counter Receipt
+window.handlePrintFineReceipt = (studentId, userEmail, bookTitle, fineAmount) => {
+  const receiptWindow = window.open("", "_blank", "width=600,height=600");
+  const printContent = `
+    <html>
+      <head>
+        <title>Arcadian Library - Official Cash Receipt</title>
+        <style>
+          body { font-family: sans-serif; padding: 20px; color: #333; }
+          .header { text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 10px; margin-bottom: 15px; }
+          .title { font-size: 18px; font-weight: bold; }
+          .sub { font-size: 12px; color: #666; }
+          .row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+          .total { border-top: 2px solid #000; padding-top: 10px; font-size: 16px; font-weight: bold; margin-top: 15px; }
+          .footer { margin-top: 30px; text-align: center; font-size: 11px; color: #777; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="title">Arcadian School Library</div>
+          <div class="sub">Official Over-the-Counter Payment Receipt</div>
+        </div>
+        <div class="row"><strong>Date:</strong> <span>${new Date().toLocaleDateString()}</span></div>
+        <div class="row"><strong>Student ID:</strong> <span>${studentId}</span></div>
+        <div class="row"><strong>Student Email:</strong> <span>${userEmail}</span></div>
+        <div class="row"><strong>Book Returned:</strong> <span>${bookTitle}</span></div>
+        <div class="row"><strong>Payment Method:</strong> <span>Over-the-Counter Cash</span></div>
+        <div class="total">Total Paid: ₱${fineAmount.toFixed(2)}</div>
+        <div class="footer">
+          <p>Thank you for settling your library dues!</p>
+          <p>Arcadian Library System &copy; 2026</p>
+        </div>
+        <script>window.print();</script>
+      </body>
+    </html>
+  `;
+  receiptWindow.document.write(printContent);
+  receiptWindow.document.close();
+};
+
+// Export Fines History to CSV
+window.exportFinesToCSV = () => {
+  if (activeStudentRecords.length === 0) {
+    alert("No fine records available to export.");
+    return;
+  }
+
+  const headers = ["Student ID", "Student Email", "Book Title", "Days Overdue", "Fine Amount (PHP)", "Payment Status", "Payment Channel"];
+  const csvRows = [headers.join(",")];
+
+  activeStudentRecords.forEach((rec) => {
+    const dueDateObj = rec.dueDate ? new Date(rec.dueDate.seconds * 1000) : null;
+    const fineDetails = calculateOverdueFine(dueDateObj);
+
+    if (fineDetails.isOverdue || rec.finePaid) {
+      const studentId = `"${(rec.studentId || 'N/A').replace(/"/g, '""')}"`;
+      const userEmail = `"${(rec.userEmail || '').replace(/"/g, '""')}"`;
+      const bookTitle = `"${(rec.bookTitle || '').replace(/"/g, '""')}"`;
+      const daysLate = fineDetails.daysLate;
+      const fineAmount = rec.finePaid ? (rec.fineAmountPaid || 0) : fineDetails.fineAmount;
+      const status = rec.finePaid ? '"Paid"' : '"Unpaid"';
+      const channel = '"Over-the-Counter Cash"';
+
+      csvRows.push([studentId, userEmail, bookTitle, daysLate, fineAmount, status, channel].join(","));
+    }
+  });
+
+  const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", `arcadian_fines_report_${new Date().toISOString().slice(0,10)}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 window.handleRemoveBorrowRecord = async (recordId) => {
