@@ -231,6 +231,10 @@ function calculateOverdueFine(dueDateObj) {
   return { isOverdue: true, daysLate, fineAmount };
 }
 
+function escapeQuotes(str) {
+  return str ? String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;') : '';
+}
+
 function renderBookCoverHTML(imageUrl, title, category, extraClass = "w-12 h-16") {
   if (imageUrl && imageUrl.trim() !== "") {
     return `
@@ -250,6 +254,38 @@ function renderFallbackCoverHTML(title, category, extraClass = "w-12 h-16") {
     </div>
   `;
 }
+
+// Modal View Handler Attached to Window Scope
+window.openSummaryModal = (title, author, summaryText, category = "General", imageUrl = "", subCategory = "") => {
+  const modal = document.getElementById("summary-modal");
+  const modalTitle = document.getElementById("modal-book-title");
+  const modalAuthor = document.getElementById("modal-book-author");
+  const modalCategory = document.getElementById("modal-book-category");
+  const modalSummary = document.getElementById("modal-book-summary");
+  const coverContainer = document.getElementById("modal-cover-container");
+
+  if (!modal) return;
+
+  if (modalTitle) modalTitle.textContent = title;
+  if (modalAuthor) modalAuthor.textContent = `by ${author}`;
+  if (modalCategory) {
+    modalCategory.textContent = subCategory && subCategory.trim() !== "" 
+      ? `${category} • ${subCategory}` 
+      : category;
+  }
+  if (modalSummary) modalSummary.textContent = summaryText && summaryText.trim() !== "" ? summaryText : "No summary available.";
+
+  if (coverContainer) {
+    coverContainer.innerHTML = renderBookCoverHTML(imageUrl, title, category, "w-full h-full");
+  }
+
+  modal.classList.remove("hidden");
+};
+
+window.closeSummaryModal = () => {
+  const modal = document.getElementById("summary-modal");
+  if (modal) modal.classList.add("hidden");
+};
 
 // Sync User Profile Details & Header Display
 async function syncUserProfile(user, inputStudentId = "", firstName = "", lastName = "") {
@@ -868,38 +904,6 @@ function renderStudentRecordsTable() {
     `;
   }).join("");
 }
-
-// Modal Summary View Handler
-window.openSummaryModal = (title, author, summaryText, category = "General", imageUrl = "", subCategory = "") => {
-  const modal = document.getElementById("summary-modal");
-  const modalTitle = document.getElementById("modal-book-title");
-  const modalAuthor = document.getElementById("modal-book-author");
-  const modalCategory = document.getElementById("modal-book-category");
-  const modalSummary = document.getElementById("modal-book-summary");
-  const coverContainer = document.getElementById("modal-cover-container");
-
-  if (!modal) return;
-
-  if (modalTitle) modalTitle.textContent = title;
-  if (modalAuthor) modalAuthor.textContent = `by ${author}`;
-  if (modalCategory) {
-    modalCategory.textContent = subCategory && subCategory.trim() !== "" 
-      ? `${category} • ${subCategory}` 
-      : category;
-  }
-  if (modalSummary) modalSummary.textContent = summaryText && summaryText.trim() !== "" ? summaryText : "No summary available.";
-
-  if (coverContainer) {
-    coverContainer.innerHTML = renderBookCoverHTML(imageUrl, title, category, "w-full h-full");
-  }
-
-  modal.classList.remove("hidden");
-};
-
-window.closeSummaryModal = () => {
-  const modal = document.getElementById("summary-modal");
-  if (modal) modal.classList.add("hidden");
-};
 
 // Toggle Bookmark / Favorite Action
 window.handleToggleBookmark = async (bookId) => {
@@ -1774,7 +1778,7 @@ function renderTopBooks(books) {
           </span>
           ${!isAdmin ? `
             <div class="flex items-center gap-1.5">
-              <button onclick="openSummaryModal('${escapeHtml(book.title)}', '${escapeHtml(book.author)}', '${escapeHtml(book.summary)}', '${escapeHtml(book.category)}', '${escapeHtml(book.coverUrl)}', '${escapeHtml(book.subCategory || '')}')" class="px-2.5 py-1.5 rounded-lg font-semibold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Preview</button>
+              <button onclick="openSummaryModal('${escapeQuotes(book.title)}', '${escapeQuotes(book.author)}', '${escapeQuotes(book.summary)}', '${escapeQuotes(book.category)}', '${escapeQuotes(book.coverUrl)}', '${escapeQuotes(book.subCategory || '')}')" class="px-2.5 py-1.5 rounded-lg font-semibold text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Preview</button>
               <button onclick="handleBorrowAction('${book.id}', ${book.available})" class="px-3 py-1.5 rounded-lg font-semibold text-xs transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}" ${!isAvailable ? 'disabled' : ''}>Request</button>
             </div>
           ` : `
@@ -1850,7 +1854,7 @@ function renderBookTable(books) {
                 ` : ''}
               </div>
               <div class="text-[11px] text-slate-500 font-medium">by ${escapeHtml(book.author)} ${book.isbn ? `• ISBN: ${escapeHtml(book.isbn)}` : ''}</div>
-              <button onclick="openSummaryModal('${escapeHtml(book.title)}', '${escapeHtml(book.author)}', '${escapeHtml(book.summary)}', '${escapeHtml(book.category)}', '${escapeHtml(book.coverUrl)}', '${escapeHtml(book.subCategory || '')}')" class="mt-1 text-[10px] text-indigo-600 hover:underline font-bold inline-flex items-center gap-1">
+              <button onclick="openSummaryModal('${escapeQuotes(book.title)}', '${escapeQuotes(book.author)}', '${escapeQuotes(book.summary)}', '${escapeQuotes(book.category)}', '${escapeQuotes(book.coverUrl)}', '${escapeQuotes(book.subCategory || '')}')" class="mt-1 text-[10px] text-indigo-600 hover:underline font-bold inline-flex items-center gap-1">
                 <i class="fa-solid fa-align-left"></i> Read Description & Summary
               </button>
             </div>
