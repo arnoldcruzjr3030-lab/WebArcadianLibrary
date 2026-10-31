@@ -196,6 +196,11 @@ let currentUserApproved = false;
 let currentUserName = "";
 let activeCategoryFilter = "ALL";
 
+// Semester & Calendar State
+let activeSemesterCode = "";
+let semesterDateMap = new Map();
+let calendarCurrentDate = new Date();
+
 // Pagination State
 let catalogCurrentPage = 1;
 const catalogItemsPerPage = 5;
@@ -254,6 +259,209 @@ function renderFallbackCoverHTML(title, category, extraClass = "w-12 h-16") {
     </div>
   `;
 }
+
+// Interactive Admin Calendar Logic
+function renderAdminCalendar() {
+  const monthYearEl = document.getElementById("calendar-month-year");
+  const daysGridEl = document.getElementById("calendar-days-grid");
+  if (!monthYearEl || !daysGridEl) return;
+
+  const year = calendarCurrentDate.getFullYear();
+  const month = calendarCurrentDate.getMonth();
+
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  monthYearEl.textContent = `${monthNames[month]} ${year}`;
+
+  const firstDayIndex = new Date(year, month, 1).getDay();
+  const totalDays = new Date(year, month + 1, 0).getDate();
+
+  const currentSemConfig = activeSemesterCode ? semesterDateMap.get(activeSemesterCode) : null;
+  const semStart = currentSemConfig && currentSemConfig.start ? new Date(currentSemConfig.start) : null;
+  const semEnd = currentSemConfig && currentSemConfig.end ? new Date(currentSemConfig.end) : null;
+
+  let daysHtml = "";
+
+  for (let i = 0; i < firstDayIndex; i++) {
+    daysHtml += `<div class="py-2"></div>`;
+  }
+
+  for (let day = 1; day <= totalDays; day++) {
+    const thisDate = new Date(year, month, day);
+    let isSemPeriod = false;
+
+    if (semStart && semEnd) {
+      isSemPeriod = thisDate >= semStart && thisDate <= semEnd;
+    }
+
+    const isToday = new Date().toDateString() === thisDate.toDateString();
+
+    let bgClass = "hover:bg-slate-100 text-slate-700";
+    if (isSemPeriod) {
+      bgClass = "bg-indigo-100 text-indigo-900 font-bold border border-indigo-200";
+    }
+    if (isToday) {
+      bgClass = "bg-indigo-600 text-white font-bold rounded-lg shadow-sm";
+    }
+
+    daysHtml += `<div class="py-1.5 rounded-md text-xs transition ${bgClass}">${day}</div>`;
+  }
+
+  daysGridEl.innerHTML = daysHtml;
+}
+
+window.changeCalendarMonth = (offset) => {
+  calendarCurrentDate.setMonth(calendarCurrentDate.getMonth() + offset);
+  renderAdminCalendar();
+};
+
+window.handleSaveSemesterDates = () => {
+  const semSelect = document.getElementById("config-sem-select");
+  const startDateInput = document.getElementById("sem-start-date");
+  const endDateInput = document.getElementById("sem-end-date");
+
+  if (!semSelect || !startDateInput || !endDateInput) return;
+
+  const semCode = semSelect.value;
+  if (!semCode) {
+    alert("Please select or add a semester first.");
+    return;
+  }
+
+  const startVal = startDateInput.value;
+  const endVal = endDateInput.value;
+
+  if (!startVal || !endVal) {
+    alert("Please select both Start Date and End Date for the semester.");
+    return;
+  }
+
+  activeSemesterCode = semCode;
+  semesterDateMap.set(semCode, { start: startVal, end: endVal });
+
+  const activeBadge = document.getElementById("active-sem-badge");
+  if (activeBadge) {
+    const selectedOption = semSelect.options[semSelect.selectedIndex];
+    activeBadge.textContent = `Active: ${selectedOption ? selectedOption.textContent : semCode}`;
+  }
+
+  alert(`Semester dates updated! Active semester set to ${semCode} (${startVal} to ${endVal}).`);
+  renderAdminCalendar();
+};
+
+// Sync Semester Dropdowns Across Configurator & Fine Filter
+function syncSemesterDropdowns(newSemCode, newSemName) {
+  const filterSelect = document.getElementById("fine-semester-filter");
+  const configSelect = document.getElementById("config-sem-select");
+
+  [filterSelect, configSelect].forEach(select => {
+    if (!select) return;
+
+    // Remove "No semesters" placeholder if present
+    const dummyOpt = select.querySelector('option[value=""]');
+    if (dummyOpt) dummyOpt.remove();
+
+    let exists = false;
+    for (let option of select.options) {
+      if (option.value === newSemCode) {
+        exists = true;
+        break;
+      }
+    }
+    if (!exists) {
+      const opt = document.createElement("option");
+      opt.value = newSemCode;
+      opt.textContent = newSemName;
+      select.appendChild(opt);
+    }
+  });
+}
+
+// Add New Academic Semester
+window.handleAddNewSemesterPrompt = () => {
+  const semName = prompt("Enter new semester display label (e.g. 1st Sem AY 2026-2027):");
+  if (!semName || !semName.trim()) return;
+
+  const semCode = prompt("Enter unique key code for this semester (e.g. 2026-1):");
+  if (!semCode || !semCode.trim()) return;
+
+  const trimmedName = semName.trim();
+  const trimmedCode = semCode.trim();
+
+  syncSemesterDropdowns(trimmedCode, trimmedName);
+  activeSemesterCode = trimmedCode;
+
+  const activeBadge = document.getElementById("active-sem-badge");
+  if (activeBadge) activeBadge.textContent = `Active: ${trimmedName}`;
+
+  alert(`Semester "${trimmedName}" added successfully!`);
+};
+
+// Edit Currently Selected Semester Name
+window.handleEditCurrentSemesterPrompt = () => {
+  const filterSelect = document.getElementById("fine-semester-filter");
+  if (!filterSelect) return;
+
+  const selectedOption = filterSelect.options[filterSelect.selectedIndex];
+  if (!selectedOption || selectedOption.value === "ALL" || selectedOption.value === "") {
+    alert("Please select a specific semester to edit.");
+    return;
+  }
+
+  const updatedName = prompt("Edit semester display label:", selectedOption.textContent);
+  if (updatedName && updatedName.trim()) {
+    selectedOption.textContent = updatedName.trim();
+
+    const configSelect = document.getElementById("config-sem-select");
+    if (configSelect) {
+      for (let opt of configSelect.options) {
+        if (opt.value === selectedOption.value) {
+          opt.textContent = updatedName.trim();
+          break;
+        }
+      }
+    }
+
+    alert("Semester label updated successfully!");
+    renderFinesTable();
+  }
+};
+
+// Remove/Delete Currently Selected Semester
+window.handleRemoveCurrentSemesterPrompt = () => {
+  const filterSelect = document.getElementById("fine-semester-filter");
+  if (!filterSelect) return;
+
+  const selectedOption = filterSelect.options[filterSelect.selectedIndex];
+  if (!selectedOption || selectedOption.value === "ALL" || selectedOption.value === "") {
+    alert("Please select a specific semester to remove.");
+    return;
+  }
+
+  if (confirm(`Are you sure you want to remove "${selectedOption.textContent}"?`)) {
+    const valToRemove = selectedOption.value;
+    filterSelect.remove(filterSelect.selectedIndex);
+
+    const configSelect = document.getElementById("config-sem-select");
+    if (configSelect) {
+      for (let i = 0; i < configSelect.options.length; i++) {
+        if (configSelect.options[i].value === valToRemove) {
+          configSelect.remove(i);
+          break;
+        }
+      }
+    }
+
+    if (activeSemesterCode === valToRemove) {
+      activeSemesterCode = "";
+      const activeBadge = document.getElementById("active-sem-badge");
+      if (activeBadge) activeBadge.textContent = "No Active Semester Selected";
+    }
+
+    filterSelect.value = "ALL";
+    alert("Semester removed.");
+    renderFinesTable();
+  }
+};
 
 // Modal View Handler Attached to Window Scope
 window.openSummaryModal = (title, author, summaryText, category = "General", imageUrl = "", subCategory = "") => {
@@ -1529,9 +1737,8 @@ function renderFinesTable() {
     const dueDateObj = rec.dueDate ? new Date(rec.dueDate.seconds * 1000) : null;
     const fineDetails = calculateOverdueFine(dueDateObj);
 
-    // Academic Semester Tagging
-    const recordSem = rec.semester || "2025-2";
-    if (semesterFilter !== "ALL" && recordSem !== semesterFilter) {
+    // Academic Semester Filter
+    if (semesterFilter !== "ALL" && rec.semester !== semesterFilter) {
       return;
     }
 
@@ -2159,6 +2366,7 @@ function resetForm() {
 
 if (cancelBtn) cancelBtn.addEventListener("click", resetForm);
 
+// Dynamic Student Request Borrow Action Tagged with Active Semester Code
 window.handleBorrowAction = async (bookId, currentAvailable) => {
   if (!auth.currentUser) {
     alert("Please sign in or register to submit borrowing requests.");
@@ -2203,7 +2411,8 @@ window.handleBorrowAction = async (bookId, currentAvailable) => {
       borrowedAt: new Date(),
       durationDays: requestedDays,
       dueDate: null,
-      status: "pending"
+      status: "pending",
+      semester: activeSemesterCode || "UNASSIGNED"
     });
 
     alert(`Borrow request submitted for ${requestedDays} days! Waiting for Admin approval.`);
@@ -2311,3 +2520,8 @@ if (searchInput) {
     renderBookTable(allBooks);
   });
 }
+
+// Render Admin Interactive Calendar on DOM Load
+document.addEventListener("DOMContentLoaded", () => {
+  renderAdminCalendar();
+});
