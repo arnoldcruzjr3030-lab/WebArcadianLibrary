@@ -67,7 +67,10 @@ const isProfilePage = path.endsWith("profile.html");
 const authForm = document.getElementById("auth-form");
 const authEmail = document.getElementById("auth-email");
 const authPassword = document.getElementById("auth-password");
+const authFirstName = document.getElementById("auth-first-name");
+const authLastName = document.getElementById("auth-last-name");
 const authStudentId = document.getElementById("auth-student-id");
+const signupFieldsContainer = document.getElementById("signup-fields-container");
 const studentIdContainer = document.getElementById("student-id-container");
 const forgotPasswordLink = document.getElementById("forgot-password-link");
 const authError = document.getElementById("auth-error");
@@ -462,14 +465,21 @@ function switchAdminTab(targetTab) {
 });
 
 // Sync User Profile
-async function syncUserProfile(user, inputStudentId = "") {
+async function syncUserProfile(user, inputStudentId = "", firstName = "", lastName = "") {
   const userRef = doc(db, "users", user.uid);
   const userSnap = await getDoc(userRef);
+
+  let formattedDisplayName = user.displayName;
+  if (firstName || lastName) {
+    formattedDisplayName = `${firstName} ${lastName}`.trim();
+  }
 
   if (!userSnap.exists()) {
     const newUserData = {
       email: user.email,
-      displayName: user.displayName || user.email.split("@")[0],
+      firstName: firstName || "",
+      lastName: lastName || "",
+      displayName: formattedDisplayName || user.email.split("@")[0],
       studentId: inputStudentId || "N/A",
       role: "student",
       approved: false,
@@ -715,12 +725,14 @@ if (isLoginPage) {
         authSubtitle.textContent = "Register as a student to access Arcadian Library";
         authSubmitBtn.textContent = "Sign Up";
         toggleAuthModeBtn.textContent = "Already have an account? Sign In";
+        if (signupFieldsContainer) signupFieldsContainer.classList.remove("hidden");
         if (studentIdContainer) studentIdContainer.classList.remove("hidden");
       } else {
         authTitle.textContent = "Welcome Back";
         authSubtitle.textContent = "Sign in to access Arcadian Library Portal";
         authSubmitBtn.textContent = "Sign In";
         toggleAuthModeBtn.textContent = "Don't have an account? Sign Up";
+        if (signupFieldsContainer) signupFieldsContainer.classList.add("hidden");
         if (studentIdContainer) studentIdContainer.classList.add("hidden");
       }
     });
@@ -733,20 +745,32 @@ if (isLoginPage) {
       
       const email = authEmail.value.trim();
       const password = authPassword.value;
+      const firstName = authFirstName ? authFirstName.value.trim() : "";
+      const lastName = authLastName ? authLastName.value.trim() : "";
       const studentId = authStudentId ? authStudentId.value.trim() : "";
 
-      if (isSignUpMode && !studentId) {
-        if (authError) {
-          authError.textContent = "Please enter your valid Student ID Number.";
-          authError.classList.remove("hidden");
+      if (isSignUpMode) {
+        if (!firstName || !lastName) {
+          if (authError) {
+            authError.textContent = "Please enter your First Name and Last Name.";
+            authError.classList.remove("hidden");
+          }
+          return;
         }
-        return;
+
+        if (!studentId) {
+          if (authError) {
+            authError.textContent = "Please enter your valid Student ID Number.";
+            authError.classList.remove("hidden");
+          }
+          return;
+        }
       }
 
       try {
         if (isSignUpMode) {
           const userCred = await createUserWithEmailAndPassword(auth, email, password);
-          await syncUserProfile(userCred.user, studentId);
+          await syncUserProfile(userCred.user, studentId, firstName, lastName);
           alert("Account created! Your registration is now pending Admin approval.");
         } else {
           await signInWithEmailAndPassword(auth, email, password);
@@ -1193,16 +1217,16 @@ onAuthStateChanged(auth, async (user) => {
       }
     }
 
-    // 2. Redirect logged-in users away from login page
+    // 2. Redirect logged-in users away from login page to index.html (or admin dashboard if admin)
     if (isLoginPage && isApproved) {
-      window.location.href = role === "admin" ? "admin-dashboard.html" : "student-dashboard.html";
+      window.location.href = role === "admin" ? "admin-dashboard.html" : "index.html";
       return;
     }
 
     // 3. Restrict admin-only dashboard access
     if (isAdminPage && role !== "admin") {
       alert("Access Denied: Only Admins can access the Admin Control Panel.");
-      window.location.href = "student-dashboard.html";
+      window.location.href = "index.html";
       return;
     }
 
@@ -1282,9 +1306,10 @@ async function loadStudentProfileDetails(user) {
     if (userSnap.exists()) {
       const userData = userSnap.data();
       const currentId = userData.studentId || "N/A";
+      const nameToShow = userData.displayName || user.displayName || user.email.split("@")[0];
 
       if (profileNameDisplay) {
-        profileNameDisplay.textContent = `${userData.displayName || user.email.split("@")[0]} (ID: ${currentId})`;
+        profileNameDisplay.textContent = `${nameToShow} (ID: ${currentId})`;
       }
       
       if (editStudentIdInput) editStudentIdInput.value = currentId !== "N/A" ? currentId : "";
@@ -1306,7 +1331,10 @@ async function loadStudentProfileDetails(user) {
 
       try {
         await updateDoc(doc(db, "users", user.uid), { studentId: newStudentId });
-        if (profileNameDisplay) profileNameDisplay.textContent = `${user.displayName || user.email.split("@")[0]} (ID: ${newStudentId})`;
+        const userSnap = await getDoc(doc(db, "users", user.uid));
+        const updatedName = userSnap.exists() ? (userSnap.data().displayName || user.email.split("@")[0]) : user.email.split("@")[0];
+        
+        if (profileNameDisplay) profileNameDisplay.textContent = `${updatedName} (ID: ${newStudentId})`;
         if (idUpdateAlert) {
           idUpdateAlert.textContent = "Student ID updated successfully!";
           idUpdateAlert.className = "p-3 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200";
