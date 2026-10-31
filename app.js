@@ -1130,93 +1130,19 @@ if (adminResetPwdBtn) {
 
 // Auth State Observer
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    const userProfileStatus = await syncUserProfile(user);
-    const role = userProfileStatus.role;
-    const isApproved = userProfileStatus.approved;
-
-    if (role === "student" && !isApproved) {
-      if (isLoginPage && authError) {
-        authError.textContent = "Your account is pending verification by the Library Admin.";
-        authError.classList.remove("hidden");
-      } else {
-        alert("Your account is currently pending Admin verification.");
-        await signOut(auth);
-        window.location.href = "login.html";
-        return;
-      }
-    }
-
-    if (isLoginPage && isApproved) {
-      window.location.href = role === "admin" ? "admin-dashboard.html" : "student-dashboard.html";
-      return;
-    }
-
-    if (isAdminPage && role !== "admin") {
-      alert("Access Denied: Only Admins can access the Admin Control Panel.");
-      window.location.href = "student-dashboard.html";
-      return;
-    }
-
-    if (loginNavBtn) loginNavBtn.classList.add("hidden");
-    if (userProfile) {
-      userProfile.classList.remove("hidden");
-      userProfile.classList.add("flex");
-    }
-
-    if (dashboardPortalBtn) {
-      dashboardPortalBtn.href = role === "admin" ? "admin-dashboard.html" : "student-dashboard.html";
-    }
-
-    if (userEmailDisplay) {
-      userEmailDisplay.innerHTML = `
-        <span>${user.displayName || user.email}</span>
-        <span class="ml-1 px-2 py-0.5 text-[10px] uppercase font-bold rounded-full ${role === 'admin' ? 'bg-amber-400 text-slate-950' : 'bg-indigo-700 text-indigo-100'}">
-          ${role}
-        </span>
-      `;
-    }
-
-    if (isAdminPage) {
-      loadRegisteredStudents();
-      listenToPendingBorrowRequests();
-      listenToAllStudentRecords();
-
-      const editId = sessionStorage.getItem("editBookId");
-      if (editId) {
-        sessionStorage.removeItem("editBookId");
-        switchAdminTab("catalog");
-        setTimeout(() => window.populateEditForm(editId), 300);
-      }
-    }
-
-    // Always track user borrowing states & bookmarks
-    listenToStudentBorrowedBooks(user.uid);
-    listenToUserBookmarks(user.uid);
-
-    if (isProfilePage) {
-      loadStudentProfileDetails(user);
-    }
-  } else {
-    currentUserRole = "student";
-    currentUserApproved = false;
-    studentActiveBorrowedMap.clear();
-    studentBorrowRecordMap.clear();
-    studentBookmarkedMap.clear();
-    
-    if (isAdminPage || isStudentPage || isProfilePage) {
-      window.location.href = "login.html";
-      return;
-    }
-
-    if (loginNavBtn) loginNavBtn.classList.remove("hidden");
-    if (userProfile) {
-      userProfile.classList.add("hidden");
-      userProfile.classList.remove("flex");
-    }
+  if (!user) {
+    if (isAdminPage) window.location.href = "login.html";
+    return;
   }
 
-  listenToBookCollection();
+  if (userEmailDisplay) {
+    userEmailDisplay.innerHTML = `
+      <span class="break-all">${user.email}</span>
+      <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">ADMIN</span>
+    `;
+  }
+
+  await handleUserRoleRedirect(user);
 });
 
 // Load Profile Details
