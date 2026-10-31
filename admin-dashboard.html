@@ -361,8 +361,62 @@
 
     <!-- PAGE 4: FINES & PAYMENTS -->
     <div id="page-fines" class="hidden space-y-5 sm:space-y-6">
-      
-      <!-- Top Summary Cards & Global Reset -->
+
+      <!-- Semester Academic Calendar & Date Config Card -->
+      <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div>
+            <h3 class="font-bold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-calendar-days text-indigo-600"></i> Semester Academic Calendar Settings
+            </h3>
+            <p class="text-xs text-slate-400">Configure start and end dates for active borrowing periods.</p>
+          </div>
+          <span id="active-sem-badge" class="px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-extrabold rounded-full border border-indigo-100">
+            No Active Semester Selected
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+          <!-- Semester Date Configurator Form -->
+          <div class="md:col-span-5 space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
+            <h4 class="text-xs font-bold uppercase text-slate-500">Configure Semester Dates</h4>
+            <div>
+              <label class="block text-[11px] font-bold text-slate-600 mb-1">Target Semester</label>
+              <select id="config-sem-select" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="" disabled selected>No semesters added yet</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">Start Date</label>
+                <input type="date" id="sem-start-date" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-bold text-slate-600 mb-1">End Date</label>
+                <input type="date" id="sem-end-date" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+            </div>
+            <button onclick="handleSaveSemesterDates()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5">
+              <i class="fa-solid fa-floppy-disk"></i> Set Active Semester Dates
+            </button>
+          </div>
+
+          <!-- Mini Interactive Calendar View -->
+          <div class="md:col-span-7 bg-white p-4 rounded-xl border border-slate-200/80 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <button onclick="changeCalendarMonth(-1)" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"><i class="fa-solid fa-chevron-left"></i></button>
+              <span id="calendar-month-year" class="text-xs font-extrabold text-slate-800 uppercase">October 2026</span>
+              <button onclick="changeCalendarMonth(1)" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="grid grid-cols-7 text-center text-[10px] font-bold text-slate-400 mb-2">
+              <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+            </div>
+            <div id="calendar-days-grid" class="grid grid-cols-7 text-center text-xs gap-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Summary Cards -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
         <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
           <div>
@@ -391,41 +445,44 @@
               <i class="fa-solid fa-building-columns text-indigo-600"></i> Over-the-Counter (School Library)
             </h3>
           </div>
-          <button onclick="handleResetCollections()" class="px-3 py-2 text-xs font-bold rounded-xl bg-slate-100 hover:bg-red-50 hover:text-red-700 text-slate-700 border border-slate-200 transition flex items-center gap-1">
-            <i class="fa-solid fa-rotate-left"></i> Reset Total
-          </button>
         </div>
       </div>
 
-      <!-- Overdue Fine Records Card -->
+      <!-- Overdue Fine History Records -->
       <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
         
-        <!-- Controls & Filters Header -->
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
           <div>
             <h3 class="font-bold text-sm sm:text-base text-slate-900 flex items-center gap-2">
               <i class="fa-solid fa-receipt text-indigo-600"></i> Overdue Fine History & OTC Payments
             </h3>
-            <p class="text-xs text-slate-400">Manage over-the-counter payments, semester histories, and receipts.</p>
+            <p class="text-xs text-slate-400">Manage over-the-counter payments and semester histories.</p>
           </div>
 
           <div class="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
-            <!-- Semester Filter Dropdown -->
+            <!-- Filter Dropdown -->
             <select id="fine-semester-filter" onchange="renderFinesTable()" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500">
               <option value="ALL">All Semesters</option>
-              <option value="2026-1">1st Sem AY 2026-2027</option>
-              <option value="2025-2">2nd Sem AY 2025-2026</option>
-              <option value="2025-1">1st Sem AY 2025-2026</option>
             </select>
 
-            <!-- CSV Export Button -->
-            <button onclick="exportFinesToCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 whitespace-nowrap">
+            <!-- Semester Action Buttons -->
+            <button onclick="handleAddNewSemesterPrompt()" class="px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs rounded-xl transition flex items-center gap-1 whitespace-nowrap" title="Add New Semester">
+              <i class="fa-solid fa-plus"></i> Add Sem
+            </button>
+            <button onclick="handleEditCurrentSemesterPrompt()" class="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition flex items-center gap-1" title="Edit Selected Semester Name">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button onclick="handleRemoveCurrentSemesterPrompt()" class="px-2.5 py-2 bg-red-50 hover:bg-red-100 text-red-700 font-bold text-xs rounded-xl border border-red-200 transition flex items-center gap-1" title="Remove Selected Semester">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+
+            <!-- Export Button -->
+            <button onclick="exportBorrowingRecordsToCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 whitespace-nowrap">
               <i class="fa-solid fa-file-csv"></i> Export Fines CSV
             </button>
           </div>
         </div>
 
-        <!-- Fines Table -->
         <div class="overflow-x-auto rounded-xl border border-slate-100">
           <table class="w-full min-w-[700px] text-left border-collapse">
             <thead>
@@ -435,7 +492,7 @@
                 <th class="py-3 px-3 text-center">Days Overdue</th>
                 <th class="py-3 px-3 text-center">Fine Amount</th>
                 <th class="py-3 px-3 text-center">Status / Channel</th>
-                <th class="py-3 px-4 text-center">Actions & Receipts</th>
+                <th class="py-3 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody id="fines-records-tbody" class="divide-y divide-slate-100 text-xs font-medium"></tbody>
