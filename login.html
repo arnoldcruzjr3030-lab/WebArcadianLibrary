@@ -3,111 +3,204 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Arcadian - Login & Portal Access</title>
+  <title>Arcadian - School Library Borrowing Portal</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css" />
 </head>
-<body class="bg-slate-900 font-sans min-h-screen text-slate-100 flex flex-col justify-between items-center p-4 selection:bg-indigo-500 selection:text-white">
+<body class="bg-slate-50 font-sans min-h-screen text-slate-800 flex flex-col selection:bg-indigo-500 selection:text-white">
 
-  <!-- Header Branding -->
-  <div class="w-full max-w-md flex justify-between items-center py-4">
-    <a href="index.html" class="flex items-center space-x-3">
-      <div class="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white text-xl shadow-md">
-        <i class="fa-solid fa-book-open"></i>
-      </div>
-      <div>
-        <h1 class="text-xl font-bold tracking-tight text-white">Arcadian</h1>
-        <p class="text-[10px] text-indigo-400 font-bold uppercase tracking-wider">Library Portal</p>
-      </div>
-    </a>
-    <a href="index.html" class="text-xs text-slate-400 hover:text-white transition flex items-center gap-1 font-semibold">
-      <i class="fa-solid fa-arrow-left"></i> Home
-    </a>
-  </div>
-
-  <!-- Authentication Card -->
-  <div class="w-full max-w-md bg-slate-800 border border-slate-700/80 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
-    <div class="text-center space-y-1">
-      <h2 id="auth-title" class="text-2xl font-bold text-white tracking-tight">Welcome Back</h2>
-      <p id="auth-subtitle" class="text-xs text-slate-400">Sign in to access Arcadian Library Portal</p>
-    </div>
-
-    <!-- Error Alert Box -->
-    <div id="auth-error" class="hidden p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold rounded-xl text-center"></div>
-
-    <!-- FIXED: Removed method="POST" and action="#" -->
-    <form id="auth-form" onsubmit="return false;" class="space-y-4">
+  <!-- Header Navigation -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-3.5 sm:px-6 py-3 flex flex-wrap justify-between items-center gap-2">
       
-      <!-- Student ID Field (Visible during Sign Up) -->
-      <div id="student-id-container" class="hidden">
-        <label class="block text-xs font-bold text-slate-300 mb-1.5">Student ID Number *</label>
-        <div class="relative">
-          <input type="text" id="auth-student-id" name="student_id" autocomplete="off" placeholder="e.g. 2026-10492" class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
-          <i class="fa-solid fa-id-card absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+      <!-- Brand Logo -->
+      <a href="index.html" class="flex items-center space-x-2.5 sm:space-x-3">
+        <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-base sm:text-lg shadow-md shadow-indigo-900/50 flex-shrink-0">
+          <i class="fa-solid fa-book-open"></i>
         </div>
-      </div>
+        <div>
+          <h1 class="text-base sm:text-xl font-bold tracking-tight text-white leading-tight">Arcadian</h1>
+          <p class="text-[10px] sm:text-[11px] text-indigo-400 font-semibold leading-none">The Library</p>
+        </div>
+      </a>
 
-      <!-- Email Field -->
-      <div>
-        <label class="block text-xs font-bold text-slate-300 mb-1.5">Email Address *</label>
-        <div class="relative">
-          <input type="email" id="auth-email" name="email" autocomplete="username" required placeholder="student@school.edu" class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
-          <i class="fa-solid fa-envelope absolute left-3.5 top-3 text-slate-500 text-xs"></i>
-        </div>
-      </div>
-
-      <!-- Password Field with Password Visibility Toggle -->
-      <div>
-        <div class="flex justify-between items-center mb-1.5">
-          <label class="block text-xs font-bold text-slate-300">Password *</label>
-          <button type="button" id="forgot-password-link" class="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold">
-            Forgot Password?
-          </button>
-        </div>
-        <div class="relative">
-          <input type="password" id="auth-password" name="password" autocomplete="current-password" required placeholder="••••••••" class="w-full pl-10 pr-11 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-medium">
-          <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-500 text-xs"></i>
-          
-          <!-- Toggle Password Visibility Eye Button -->
-          <button type="button" id="toggle-password-visibility" class="absolute right-3.5 top-2.5 text-slate-400 hover:text-slate-200 text-xs p-1 focus:outline-none transition" title="Toggle password visibility">
-            <i id="password-eye-icon" class="fa-solid fa-eye"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Form Submit Button -->
-      <button type="submit" id="auth-submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs py-3 rounded-xl shadow-lg transition duration-150 min-h-[44px] active:scale-[0.99]">
-        Sign In
+      <!-- Mobile Menu Toggle Button -->
+      <button id="mobile-menu-btn" onclick="document.getElementById('user-nav').classList.toggle('hidden')" class="sm:hidden p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg focus:outline-none" aria-label="Toggle Navigation">
+        <i class="fa-solid fa-bars text-lg"></i>
       </button>
 
-    </form>
+      <!-- Right Navigation Actions -->
+      <div id="user-nav" class="hidden sm:flex w-full sm:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-800 transition-all duration-200">
+        
+        <a id="login-nav-btn" href="login.html" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 shadow-sm">
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In / Register
+        </a>
 
-    <!-- Social Sign In Divider -->
-    <div class="relative flex items-center justify-center my-4">
-      <div class="border-t border-slate-700 w-full"></div>
-      <span class="bg-slate-800 px-3 text-[10px] uppercase font-bold text-slate-500 tracking-wider absolute">OR</span>
+        <!-- Logged-in Navigation Profile -->
+        <div id="user-profile" class="hidden flex-col sm:flex-row items-stretch sm:items-center justify-between sm:justify-start gap-2.5 w-full sm:w-auto pt-2 sm:pt-0">
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <a id="dashboard-portal-btn" href="student-dashboard.html" class="flex-1 sm:flex-none justify-center bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 border border-slate-700">
+              <i class="fa-solid fa-table-columns"></i> Dashboard
+            </a>
+            <a href="profile.html" class="flex-1 sm:flex-none justify-center bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 border border-slate-700">
+              <i class="fa-solid fa-user"></i> Profile
+            </a>
+          </div>
+
+          <div class="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/80">
+            <span id="user-email-display" class="text-xs text-slate-300 font-medium truncate max-w-[200px] sm:max-w-none flex items-center gap-1.5"></span>
+            <button id="logout-btn" class="bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1 border border-slate-700 flex-shrink-0" title="Logout">
+              <i class="fa-solid fa-right-from-bracket"></i> Logout
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Hero Banner -->
+  <section class="bg-slate-900 text-white py-8 sm:py-12 px-3.5 sm:px-6 relative overflow-hidden border-b border-slate-800">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+      <div class="space-y-3 max-w-2xl text-center md:text-left">
+        <span class="inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+          <i class="fa-solid fa-graduation-cap mr-1"></i> The Library
+        </span>
+        <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight">Explore, Preview, and Borrow Books</h2>
+        <p class="text-slate-300 text-xs sm:text-base leading-relaxed">
+          Browse cover photos, read full book summaries, reserve titles for research or classes, and track return deadlines and fines in real-time.
+        </p>
+      </div>
+      <div class="flex gap-3 w-full sm:w-auto justify-center">
+        <a href="#catalog-section" class="w-full sm:w-auto min-h-[44px] flex items-center justify-center text-center bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition shadow-lg active:scale-[0.99]">
+          Browse Book Catalog
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Catalog Content -->
+  <main class="max-w-7xl mx-auto px-3.5 sm:px-6 py-5 sm:py-8 w-full flex-grow space-y-6 sm:space-y-8">
+    
+    <!-- Top Most Popular Books Banner -->
+    <div class="space-y-3 sm:space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm sm:text-lg font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-fire text-amber-500"></i> Popular / Frequently Borrowed
+        </h3>
+        <span class="text-[11px] sm:text-xs text-slate-400 font-medium">Top Picks</span>
+      </div>
+
+      <div id="top-books-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
+        <!-- Dynamic Content Injected via JS -->
+      </div>
     </div>
 
-    <!-- Google Sign-In Button -->
-    <button id="google-signin-btn" type="button" class="w-full bg-slate-900 hover:bg-slate-950 text-slate-200 border border-slate-700 font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-2 min-h-[44px] active:scale-[0.99]">
-      <i class="fa-brands fa-google text-red-400 text-sm"></i> Continue with Google
-    </button>
+    <!-- Category Filter Pills Bar -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-1 px-1">
+      <!-- Category Pills Injected via JS -->
+    </div>
 
-    <!-- Sign In / Sign Up Mode Switcher -->
-    <div class="text-center pt-2">
-      <button type="button" id="toggle-auth-mode" class="text-xs text-slate-400 hover:text-indigo-400 font-semibold transition py-1">
-        Don't have an account? Sign Up
-      </button>
+    <!-- Main Inventory & Search Catalog -->
+    <div id="catalog-section" class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 sm:p-5 space-y-4">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="text-sm sm:text-base font-bold text-slate-800">Library Book Inventory</h3>
+          <p class="text-[11px] sm:text-xs text-slate-400">Search by title, author, category, ISBN, or summary text</p>
+        </div>
+
+        <div class="flex items-center gap-2.5 w-full sm:w-auto">
+          <div class="relative w-full sm:w-64">
+            <input type="text" id="search-input" placeholder="Search catalog..." class="w-full pl-9 pr-3 py-2.5 sm:py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 sm:top-2.5 text-slate-400 text-xs"></i>
+          </div>
+          <span id="catalog-count-badge" class="text-xs bg-indigo-50 text-indigo-700 px-3 py-2 sm:py-1.5 rounded-xl font-bold whitespace-nowrap border border-indigo-100 flex-shrink-0">0 Books</span>
+        </div>
+      </div>
+
+      <!-- Catalog Table Layout -->
+      <div class="overflow-x-auto -mx-4 sm:mx-0">
+        <div class="inline-block min-w-full align-middle">
+          <table class="min-w-full text-left border-collapse">
+            <thead class="hidden sm:table-header-group bg-slate-50 border-b text-[11px] font-bold text-slate-500 uppercase">
+              <tr>
+                <th class="py-3 px-3 sm:px-4">Cover & Details</th>
+                <th class="py-3 px-3">Category</th>
+                <th class="py-3 px-3 text-center">Available Stock</th>
+                <th class="py-3 px-3 sm:px-4 text-center">Action / Duration</th>
+              </tr>
+            </thead>
+            <tbody id="book-list-tbody" class="divide-y divide-slate-100 text-xs block sm:table-row-group">
+              <tr class="block sm:table-row p-4 sm:p-0">
+                <td colspan="4" class="py-8 text-center text-slate-400 block sm:table-cell">Loading library catalog...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Table Pagination Footer -->
+      <div class="flex justify-between items-center pt-3 border-t border-slate-100 text-xs text-slate-500 font-medium">
+        <button id="catalog-prev-btn" class="px-3 py-2 sm:py-1.5 border rounded-lg bg-slate-50 hover:bg-slate-100 disabled:opacity-40 font-semibold transition">
+          <i class="fa-solid fa-chevron-left mr-1"></i> Previous
+        </button>
+        <span id="catalog-page-info" class="font-semibold text-slate-700">Page 1 of 1</span>
+        <button id="catalog-next-btn" class="px-3 py-2 sm:py-1.5 border rounded-lg bg-slate-50 hover:bg-slate-100 disabled:opacity-40 font-semibold transition">
+          Next <i class="fa-solid fa-chevron-right ml-1"></i>
+        </button>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Expanded Book Summary & Image Modal Popup -->
+  <div id="summary-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3.5 sm:p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-4 sm:p-6 space-y-4 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col justify-between">
+      <div class="space-y-4 overflow-y-auto">
+        <div class="flex justify-between items-start border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-3">
+            <div id="modal-cover-container" class="w-14 h-20 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200">
+              <!-- Dynamic Image or Fallback -->
+            </div>
+            <div>
+              <h3 id="modal-book-title" class="text-sm sm:text-lg font-bold text-slate-900 leading-tight">Book Title</h3>
+              <p id="modal-book-author" class="text-xs text-slate-500 font-medium mt-0.5">by Author</p>
+              <span id="modal-book-category" class="inline-block mt-1 px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">Category</span>
+            </div>
+          </div>
+          <button onclick="closeSummaryModal()" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg text-lg flex-shrink-0">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-indigo-600 mb-1">Book Summary & Overview</h4>
+          <p id="modal-book-summary" class="text-xs text-slate-600 leading-relaxed whitespace-pre-line bg-slate-50 p-3.5 rounded-xl border border-slate-100 max-h-52 overflow-y-auto">
+            No summary available.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-100">
+        <button onclick="closeSummaryModal()" class="w-full sm:w-auto min-h-[42px] bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition">
+          Close Preview
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- Footer -->
-  <p class="text-[11px] text-slate-500 font-medium py-4">
-    Arcadian Library Management System &copy; 2026
-  </p>
+  <footer class="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 text-center space-y-1">
+      <p class="font-semibold text-slate-300">Arcadian School Library Management System</p>
+      <p>&copy; 2026 Arcadian Library. All rights reserved.</p>
+    </div>
+  </footer>
 
   <script type="module" src="app.js"></script>
 </body>
