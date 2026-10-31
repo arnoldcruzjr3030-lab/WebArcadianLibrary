@@ -34,6 +34,7 @@
 
       <!-- Navigation & Profile -->
       <div id="user-nav" class="hidden sm:flex w-full sm:w-auto flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-800 transition-all duration-200">
+        
         <div class="flex items-center gap-2 w-full sm:w-auto">
           <a href="index.html" class="flex-1 sm:flex-none justify-center bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 border border-slate-700">
             <i class="fa-solid fa-house"></i> Home
@@ -42,12 +43,15 @@
             <i class="fa-solid fa-table-columns"></i> Dashboard
           </a>
         </div>
-        <div id="user-profile" class="flex items-center justify-between sm:justify-start gap-2 sm:gap-3 border-t sm:border-t-0 sm:border-l border-slate-800 pt-2 sm:pt-0 sm:pl-3">
-          <span id="user-email-display" class="text-xs sm:text-sm text-slate-300 font-medium truncate max-w-[180px] sm:max-w-xs"></span>
+
+        <!-- Logged-in Navigation Profile -->
+        <div id="user-profile" class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between sm:justify-start gap-2.5 sm:gap-3 w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-slate-800 pt-2.5 sm:pt-0 sm:pl-3">
+          <span id="user-email-display" class="text-xs text-slate-300 font-medium truncate max-w-[200px] sm:max-w-none flex items-center gap-1.5"></span>
           <button id="logout-btn" class="bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white px-3 py-2 sm:py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 border border-slate-700 flex-shrink-0">
             <i class="fa-solid fa-right-from-bracket"></i> Logout
           </button>
         </div>
+
       </div>
 
     </div>
