@@ -38,7 +38,8 @@
     <!-- Error Alert Box -->
     <div id="auth-error" class="hidden p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold rounded-xl text-center"></div>
 
-    <form id="auth-form" method="POST" action="#" class="space-y-4">
+    <!-- FIXED: Removed method="POST" and action="#" -->
+    <form id="auth-form" onsubmit="return false;" class="space-y-4">
       
       <!-- Student ID Field (Visible during Sign Up) -->
       <div id="student-id-container" class="hidden">
