@@ -101,6 +101,7 @@ const categoryInput = document.getElementById("category");
 const subCategoryInput = document.getElementById("sub-category");
 const quickAddCatBtn = document.getElementById("quick-add-cat-btn");
 const quickAddSubCatBtn = document.getElementById("quick-add-subcat-btn");
+const quickRemoveSubCatBtn = document.getElementById("quick-remove-subcat-btn");
 const categoryManagerList = document.getElementById("category-manager-list");
 const copiesInput = document.getElementById("copies");
 const availableInput = document.getElementById("available");
@@ -1658,6 +1659,50 @@ function promptAddNewSubCategory() {
   }
 }
 
+async function promptRemoveSubCategory() {
+  if (!subCategoryInput) return;
+
+  let selectedSubCat = "";
+  if (subCategoryInput.tagName === "SELECT") {
+    selectedSubCat = subCategoryInput.value;
+  } else {
+    selectedSubCat = subCategoryInput.value.trim();
+  }
+
+  if (!selectedSubCat || selectedSubCat === "__ADD_NEW__") {
+    alert("Please select a valid sub-genre to remove.");
+    return;
+  }
+
+  if (confirm(`Are you sure you want to remove the sub-genre "${selectedSubCat}"?`)) {
+    if (subCategoryInput.tagName === "SELECT") {
+      for (let i = 0; i < subCategoryInput.options.length; i++) {
+        if (subCategoryInput.options[i].value === selectedSubCat) {
+          subCategoryInput.remove(i);
+          break;
+        }
+      }
+      subCategoryInput.value = "";
+    } else {
+      subCategoryInput.value = "";
+    }
+
+    // Optional: Clear subCategory field on existing books in database if confirmed
+    if (confirm(`Do you also want to remove "${selectedSubCat}" sub-genre tag from all books in the catalog?`)) {
+      try {
+        const booksToUpdate = allBooks.filter(b => b.subCategory && b.subCategory.toLowerCase().trim() === selectedSubCat.toLowerCase().trim());
+        const updatePromises = booksToUpdate.map(b => updateDoc(doc(db, "books", b.id), { subCategory: "" }));
+        await Promise.all(updatePromises);
+        alert(`Sub-genre "${selectedSubCat}" removed from select list and ${booksToUpdate.length} book(s).`);
+      } catch (err) {
+        alert("Error updating books: " + err.message);
+      }
+    } else {
+      alert(`Sub-genre "${selectedSubCat}" removed from the current form view.`);
+    }
+  }
+}
+
 if (categoryInput) {
   categoryInput.addEventListener("change", (e) => {
     if (e.target.value === "__ADD_NEW__") {
@@ -1682,6 +1727,10 @@ if (quickAddSubCatBtn) {
   quickAddSubCatBtn.addEventListener("click", promptAddNewSubCategory);
 }
 
+if (quickRemoveSubCatBtn) {
+  quickRemoveSubCatBtn.addEventListener("click", promptRemoveSubCategory);
+}
+
 function populateCategoriesFromBooks(books) {
   if (!categoryInput) return;
   const existingValues = Array.from(categoryInput.options).map(opt => opt.value.toLowerCase());
@@ -1695,6 +1744,19 @@ function populateCategoriesFromBooks(books) {
       existingValues.push(b.category.toLowerCase());
     }
   });
+
+  if (subCategoryInput && subCategoryInput.tagName === "SELECT") {
+    const existingSubValues = Array.from(subCategoryInput.options).map(opt => opt.value.toLowerCase());
+    books.forEach(b => {
+      if (b.subCategory && b.subCategory.trim() !== "" && !existingSubValues.includes(b.subCategory.toLowerCase())) {
+        const newOption = document.createElement("option");
+        newOption.value = b.subCategory;
+        newOption.textContent = b.subCategory;
+        subCategoryInput.insertBefore(newOption, subCategoryInput.lastElementChild);
+        existingSubValues.push(b.subCategory.toLowerCase());
+      }
+    });
+  }
 }
 
 if (isLoginPage) {
