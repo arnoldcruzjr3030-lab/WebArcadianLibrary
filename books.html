@@ -122,29 +122,30 @@
           </div>
         </div>
 
-        <!-- Hidden / Hoverable & Clickable Collapsible Quick Pick Category Menu -->
-        <div class="pt-2 border-t border-slate-100 relative group">
+        <!-- Collapsible Quick Pick Category Menu Drawer -->
+        <div class="pt-2 border-t border-slate-100 relative">
           
-          <!-- Expand / Collapse Toggle Button -->
-          <button type="button" onclick="document.getElementById('quick-pick-menu').classList.toggle('hidden')" class="w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition">
+          <!-- Toggle Button (Click to Open/Close Drawer) -->
+          <button type="button" id="quick-pick-toggle-btn" onclick="toggleQuickPickMenu()" class="w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 transition">
             <span class="flex items-center gap-2">
               <i class="fa-solid fa-layer-group text-indigo-600"></i> Quick Pick Genre List
             </span>
-            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition group-hover:rotate-180"></i>
+            <i id="quick-pick-chevron" class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200"></i>
           </button>
 
-          <!-- Dropdown Navigation List (Appears on Hover or Click) -->
-          <div id="quick-pick-menu" class="hidden group-hover:block transition-all duration-200 mt-2 bg-white border border-slate-200 rounded-xl p-2 shadow-lg space-y-1.5">
+          <!-- Dropdown Navigation List Drawer (Shows Genre List) -->
+          <div id="quick-pick-menu" class="hidden transition-all duration-200 mt-2 bg-white border border-slate-200 rounded-xl p-2 shadow-lg space-y-1">
             
-            <!-- Quick Pick Dropdown -->
-            <select id="quick-pick-dropdown" onchange="window.selectGenreQuickFilter(this.value)" class="w-full px-2.5 py-1.5 bg-amber-50/60 border border-amber-200 text-amber-900 rounded-lg text-xs font-bold focus:outline-none transition cursor-pointer mb-1">
+            <!-- Quick Pick Dropdown Option -->
+            <select id="quick-pick-dropdown" onchange="window.selectGenreQuickFilter(this.value)" class="w-full px-2.5 py-1.5 bg-indigo-50/60 border border-indigo-200 text-indigo-900 rounded-lg text-xs font-bold focus:outline-none transition cursor-pointer mb-2">
               <option value="ALL">-- Select Quick Genre --</option>
             </select>
 
-            <!-- Scrollable Category Navigation -->
-            <div id="genre-quick-list" class="space-y-1 max-h-44 overflow-y-auto no-scrollbar pt-1">
-              <!-- Dynamic genre items auto-rendered by app.js -->
+            <!-- Scrollable Category Navigation Buttons -->
+            <div id="genre-quick-list" class="space-y-1 max-h-56 overflow-y-auto no-scrollbar">
+              <!-- Dynamic genre categories auto-rendered by app.js -->
             </div>
+
           </div>
 
         </div>
@@ -220,6 +221,20 @@
       <p>&copy; 2026 Arcadian Library. All rights reserved.</p>
     </div>
   </footer>
+
+  <!-- Drawer Toggle Handler -->
+  <script>
+    function toggleQuickPickMenu() {
+      const menu = document.getElementById('quick-pick-menu');
+      const chevron = document.getElementById('quick-pick-chevron');
+      if (menu) {
+        menu.classList.toggle('hidden');
+        if (chevron) {
+          chevron.classList.toggle('rotate-180');
+        }
+      }
+    }
+  </script>
 
   <script type="module" src="app.js"></script>
 </body>
