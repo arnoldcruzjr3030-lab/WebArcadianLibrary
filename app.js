@@ -390,14 +390,56 @@ function populateGenreFilters(books) {
     sortedCategories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join("");
 
   if (genreQuickList) {
-    genreQuickList.innerHTML = sortedCategories.map(cat => `
-      <button onclick="selectGenreQuickFilter('${escapeQuotes(cat)}')" class="w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition flex items-center justify-between">
-        <span>${escapeHtml(cat)}</span>
-        <i class="fa-solid fa-chevron-right text-[10px] opacity-40"></i>
-      </button>
-    `).join("");
+    genreQuickList.innerHTML = sortedCategories.map((cat, idx) => {
+      const booksInCat = books.filter(b => b.category && b.category.trim().toLowerCase() === cat.toLowerCase());
+      const containerId = `genre-books-list-${idx}`;
+
+      return `
+        <div class="group relative rounded-xl border border-slate-200/80 bg-slate-50 hover:bg-indigo-50/50 transition">
+          <button 
+            type="button" 
+            onclick="toggleGenreBooksList('${containerId}', '${escapeQuotes(cat)}')" 
+            class="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-indigo-700 transition flex items-center justify-between"
+          >
+            <span class="flex items-center gap-1.5 truncate">
+              <i class="fa-solid fa-folder text-indigo-500 text-[11px]"></i>
+              <span>${escapeHtml(cat)}</span>
+            </span>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+              <span class="px-1.5 py-0.2 text-[10px] font-extrabold bg-slate-200 text-slate-600 rounded-full group-hover:bg-indigo-200 group-hover:text-indigo-800">${booksInCat.length}</span>
+              <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-hover:text-indigo-600 transition"></i>
+            </div>
+          </button>
+
+          <!-- Collapsible book titles list on hover or click -->
+          <div id="${containerId}" class="hidden group-hover:block px-2 pb-2 pt-1 border-t border-slate-200/60 space-y-1 bg-white rounded-b-xl">
+            ${booksInCat.length === 0 ? `
+              <p class="text-[11px] text-slate-400 italic px-2 py-1">No books in this genre.</p>
+            ` : booksInCat.map(b => `
+              <button 
+                type="button" 
+                onclick="openSummaryModal('${escapeQuotes(b.title)}', '${escapeQuotes(b.author)}', '${escapeQuotes(b.summary)}', '${escapeQuotes(b.category)}', '${escapeQuotes(b.coverUrl)}', '${escapeQuotes(b.subCategory || '')}')" 
+                class="w-full text-left px-2 py-1 rounded-lg text-[11px] font-medium text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition truncate flex items-center gap-1.5"
+                title="${escapeHtml(b.title)}"
+              >
+                <i class="fa-solid fa-book-bookmark text-[9px] text-indigo-400 flex-shrink-0"></i>
+                <span class="truncate">${escapeHtml(b.title)}</span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    }).join("");
   }
 }
+
+window.toggleGenreBooksList = (containerId, genreName) => {
+  const target = document.getElementById(containerId);
+  if (target) {
+    target.classList.toggle("hidden");
+  }
+  window.selectGenreQuickFilter(genreName);
+};
 
 window.selectGenreQuickFilter = (genreName) => {
   selectedMainGenre = genreName;
