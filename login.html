@@ -38,7 +38,8 @@
     <!-- Error Alert Box -->
     <div id="auth-error" class="hidden p-3.5 bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold rounded-xl text-center"></div>
 
-    <form id="auth-form" method="POST" action="#" class="space-y-4">
+    <!-- Form Tag Updated to Remove Standard Action/Method Attributes -->
+    <form id="auth-form" class="space-y-4" onsubmit="return false;">
       
       <!-- Sign Up Fields Container (First Name, Last Name, Student ID) -->
       <div id="signup-fields-container" class="hidden space-y-4">
