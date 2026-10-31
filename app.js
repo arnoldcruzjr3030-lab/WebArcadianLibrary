@@ -13,7 +13,7 @@ import {
   onSnapshot, 
   updateDoc, 
   deleteDoc 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -136,6 +136,7 @@ const recordsPrevBtn = document.getElementById("records-prev-btn");
 const recordsNextBtn = document.getElementById("records-next-btn");
 const recordsPageInfo = document.getElementById("records-page-info");
 
+// Profile DOM Elements
 const profileNameDisplay = document.getElementById("profile-name-display");
 const profileEmailDisplay = document.getElementById("profile-email-display");
 const profileRegDate = document.getElementById("profile-reg-date");
@@ -149,9 +150,11 @@ const statApprovedCount = document.getElementById("stat-approved-count");
 const statPendingCount = document.getElementById("stat-pending-count");
 const statTotalCount = document.getElementById("stat-total-count");
 
+const editFirstNameInput = document.getElementById("edit-first-name-input");
+const editLastNameInput = document.getElementById("edit-last-name-input");
 const editStudentIdInput = document.getElementById("edit-student-id-input");
-const saveStudentIdBtn = document.getElementById("save-student-id-btn");
-const idUpdateAlert = document.getElementById("id-update-alert");
+const saveProfileBtn = document.getElementById("save-profile-btn");
+const profileUpdateAlert = document.getElementById("profile-update-alert");
 
 // Bookmark / Favorite DOM elements
 const myBookmarksTbody = document.getElementById("my-bookmarks-tbody");
@@ -159,9 +162,26 @@ const bookmarkCountBadge = document.getElementById("bookmark-count-badge");
 const profileBookmarksTbody = document.getElementById("profile-bookmarks-tbody");
 const profileBookmarkCountBadge = document.getElementById("profile-bookmark-count-badge");
 
+// Pagination Controls for Student Dashboard
+const myBorrowPrevBtn = document.getElementById("my-borrow-prev-btn");
+const myBorrowNextBtn = document.getElementById("my-borrow-next-btn");
+const myBorrowPageInfo = document.getElementById("my-borrow-page-info");
+
+const myBookmarksPrevBtn = document.getElementById("my-bookmarks-prev-btn");
+const myBookmarksNextBtn = document.getElementById("my-bookmarks-next-btn");
+const myBookmarksPageInfo = document.getElementById("my-bookmarks-page-info");
+
+const profileHistoryPrevBtn = document.getElementById("profile-history-prev-btn");
+const profileHistoryNextBtn = document.getElementById("profile-history-next-btn");
+const profileHistoryPageInfo = document.getElementById("profile-history-page-info");
+
 let allBooks = [];
 let activeStudentRecords = [];
 let cancelledStudentRecords = [];
+let userActiveRecords = [];
+let userBookmarkList = [];
+let userHistoryList = [];
+
 let studentActiveBorrowedMap = new Map();
 let studentBorrowRecordMap = new Map();
 let studentBookmarkedMap = new Map();
@@ -173,6 +193,7 @@ let unsubscribeAllRecordsSnapshot = null;
 let unsubscribeBookmarksSnapshot = null;
 let currentUserRole = "student";
 let currentUserApproved = false;
+let currentUserName = "";
 let activeCategoryFilter = "ALL";
 
 // Pagination State
@@ -182,10 +203,17 @@ const catalogItemsPerPage = 5;
 let recordsCurrentPage = 1;
 const recordsItemsPerPage = 5;
 
-// Fine Rate Configuration (₱10.00 per late day)
+let myBorrowCurrentPage = 1;
+const myBorrowItemsPerPage = 5;
+
+let myBookmarksCurrentPage = 1;
+const myBookmarksItemsPerPage = 5;
+
+let profileHistoryCurrentPage = 1;
+const profileHistoryItemsPerPage = 5;
+
 const DAILY_FINE_RATE = 10;
 
-// Calculate accumulated fine based on due date
 function calculateOverdueFine(dueDateObj) {
   if (!dueDateObj) return { isOverdue: false, daysLate: 0, fineAmount: 0 };
   const today = new Date();
@@ -203,7 +231,6 @@ function calculateOverdueFine(dueDateObj) {
   return { isOverdue: true, daysLate, fineAmount };
 }
 
-// Render Book Covers
 function renderBookCoverHTML(imageUrl, title, category, extraClass = "w-12 h-16") {
   if (imageUrl && imageUrl.trim() !== "") {
     return `
@@ -224,7 +251,625 @@ function renderFallbackCoverHTML(title, category, extraClass = "w-12 h-16") {
   `;
 }
 
-// Modal View Handler
+// Sync User Profile Details & Header Display
+async function syncUserProfile(user, inputStudentId = "", firstName = "", lastName = "") {
+  const userRef = doc(db, "users", user.uid);
+  const userSnap = await getDoc(userRef);
+
+  let formattedDisplayName = user.displayName || "";
+  if (firstName || lastName) {
+    formattedDisplayName = `${firstName} ${lastName}`.trim();
+  }
+
+  if (!userSnap.exists()) {
+    const newUserData = {
+      email: user.email,
+      firstName: firstName || "",
+      lastName: lastName || "",
+      displayName: formattedDisplayName || user.email.split("@")[0],
+      studentId: inputStudentId || "N/A",
+      role: "student",
+      approved: false,
+      createdAt: new Date()
+    };
+    await setDoc(userRef, newUserData);
+    currentUserRole = "student";
+    currentUserApproved = false;
+    currentUserName = newUserData.displayName;
+  } else {
+    const data = userSnap.data();
+    currentUserRole = data.role || "student";
+    currentUserApproved = data.approved !== undefined ? data.approved : true;
+    currentUserName = data.displayName || `${data.firstName || ''} ${data.lastName || ''}`.trim() || user.email.split("@")[0];
+  }
+
+  updateHeaderProfileDisplay(user, currentUserName, currentUserRole);
+  return { role: currentUserRole, approved: currentUserApproved, displayName: currentUserName };
+}
+
+function updateHeaderProfileDisplay(user, name, role) {
+  if (userEmailDisplay) {
+    userEmailDisplay.innerHTML = `
+      <div class="flex items-center gap-2 flex-wrap">
+        <span class="font-bold text-slate-100 text-xs sm:text-sm"><i class="fa-solid fa-user-circle text-indigo-400 mr-1"></i>${escapeHtml(name)}</span>
+        <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-md ${role === 'admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'}">
+          ${role}
+        </span>
+      </div>
+    `;
+  }
+}
+
+// Auth State Observer
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    const userProfileStatus = await syncUserProfile(user);
+    const role = userProfileStatus.role;
+    const isApproved = userProfileStatus.approved;
+
+    if (role === "student" && !isApproved) {
+      if (isLoginPage && authError) {
+        authError.textContent = "Your account is pending verification by the Library Admin.";
+        authError.classList.remove("hidden");
+      } else {
+        alert("Your account is currently pending Admin verification.");
+        await signOut(auth);
+        window.location.href = "login.html";
+        return;
+      }
+    }
+
+    if (isLoginPage && isApproved) {
+      window.location.href = role === "admin" ? "admin-dashboard.html" : "index.html";
+      return;
+    }
+
+    if (isAdminPage && role !== "admin") {
+      alert("Access Denied: Only Admins can access the Admin Control Panel.");
+      window.location.href = "index.html";
+      return;
+    }
+
+    if (loginNavBtn) loginNavBtn.classList.add("hidden");
+    if (userProfile) {
+      userProfile.classList.remove("hidden");
+      userProfile.classList.add("flex");
+    }
+
+    if (dashboardPortalBtn) {
+      dashboardPortalBtn.href = role === "admin" ? "admin-dashboard.html" : "student-dashboard.html";
+    }
+
+    if (isAdminPage) {
+      loadRegisteredStudents();
+      listenToPendingBorrowRequests();
+      listenToAllStudentRecords();
+    }
+
+    listenToStudentBorrowedBooks(user.uid);
+    listenToUserBookmarks(user.uid);
+
+    if (isProfilePage) {
+      loadStudentProfileDetails(user);
+    }
+  } else {
+    currentUserRole = "student";
+    currentUserApproved = false;
+    currentUserName = "";
+    studentActiveBorrowedMap.clear();
+    studentBorrowRecordMap.clear();
+    studentBookmarkedMap.clear();
+
+    if (isAdminPage || isStudentPage || isProfilePage) {
+      window.location.href = "login.html";
+      return;
+    }
+
+    if (loginNavBtn) loginNavBtn.classList.remove("hidden");
+    if (userProfile) {
+      userProfile.classList.add("hidden");
+      userProfile.classList.remove("flex");
+    }
+  }
+
+  listenToBookCollection();
+});
+
+// Profile Full Name Editing
+async function loadStudentProfileDetails(user) {
+  if (profileEmailDisplay) profileEmailDisplay.textContent = user.email;
+
+  const leaveAdminSection = document.getElementById("leave-admin-section");
+
+  try {
+    const userSnap = await getDoc(doc(db, "users", user.uid));
+    if (userSnap.exists()) {
+      const userData = userSnap.data();
+      const currentId = userData.studentId || "N/A";
+      const nameToShow = userData.displayName || `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || user.email.split("@")[0];
+
+      if (profileNameDisplay) {
+        profileNameDisplay.textContent = `${nameToShow} (ID: ${currentId})`;
+      }
+      
+      if (editFirstNameInput) editFirstNameInput.value = userData.firstName || "";
+      if (editLastNameInput) editLastNameInput.value = userData.lastName || "";
+      if (editStudentIdInput) editStudentIdInput.value = currentId !== "N/A" ? currentId : "";
+
+      if (userData.createdAt && profileRegDate) {
+        profileRegDate.textContent = new Date(userData.createdAt.seconds * 1000).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' });
+      }
+
+      if (userData.role === "admin" && leaveAdminSection) leaveAdminSection.classList.remove("hidden");
+    }
+  } catch (err) {
+    console.error("Error loading profile details:", err);
+  }
+
+  if (saveProfileBtn) {
+    saveProfileBtn.onclick = async () => {
+      const newFirstName = editFirstNameInput ? editFirstNameInput.value.trim() : "";
+      const newLastName = editLastNameInput ? editLastNameInput.value.trim() : "";
+      const newStudentId = editStudentIdInput ? editStudentIdInput.value.trim() : "";
+
+      if (!newFirstName || !newLastName) {
+        alert("Please enter both First Name and Last Name.");
+        return;
+      }
+
+      const updatedDisplayName = `${newFirstName} ${newLastName}`.trim();
+
+      try {
+        await updateDoc(doc(db, "users", user.uid), {
+          firstName: newFirstName,
+          lastName: newLastName,
+          displayName: updatedDisplayName,
+          studentId: newStudentId || "N/A"
+        });
+
+        if (profileNameDisplay) profileNameDisplay.textContent = `${updatedDisplayName} (ID: ${newStudentId || 'N/A'})`;
+        updateHeaderProfileDisplay(user, updatedDisplayName, currentUserRole);
+
+        if (profileUpdateAlert) {
+          profileUpdateAlert.textContent = "Profile updated successfully!";
+          profileUpdateAlert.className = "p-3 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200";
+          profileUpdateAlert.classList.remove("hidden");
+        }
+      } catch (err) {
+        if (profileUpdateAlert) {
+          profileUpdateAlert.textContent = "Failed to update profile: " + err.message;
+          profileUpdateAlert.className = "p-3 rounded-xl text-xs font-semibold bg-red-50 text-red-800 border border-red-200";
+          profileUpdateAlert.classList.remove("hidden");
+        }
+      }
+    };
+  }
+
+  const q = query(borrowedCollection, where("userId", "==", user.uid));
+  onSnapshot(q, (snapshot) => {
+    userHistoryList = [];
+    let approved = 0;
+    let pending = 0;
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      userHistoryList.push({ id: docSnap.id, ...data });
+      if (data.status === 'approved') approved++;
+      if (data.status === 'pending') pending++;
+    });
+
+    if (statApprovedCount) statApprovedCount.textContent = approved;
+    if (statPendingCount) statPendingCount.textContent = pending;
+    if (statTotalCount) statTotalCount.textContent = userHistoryList.length;
+    if (historyCountBadge) historyCountBadge.textContent = `${userHistoryList.length} Items`;
+
+    renderProfileHistoryTable();
+  });
+}
+
+// Student Active Borrowings Table with Pagination
+function listenToStudentBorrowedBooks(userId) {
+  if (unsubscribeBorrowedSnapshot) unsubscribeBorrowedSnapshot();
+
+  const q = query(borrowedCollection, where("userId", "==", userId));
+
+  unsubscribeBorrowedSnapshot = onSnapshot(q, (snapshot) => {
+    userActiveRecords = [];
+    studentActiveBorrowedMap.clear();
+    studentBorrowRecordMap.clear();
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      userActiveRecords.push({ id: docSnap.id, ...data });
+
+      if (data.status === "pending" || data.status === "approved") {
+        studentActiveBorrowedMap.set(data.bookId, data.status);
+        studentBorrowRecordMap.set(data.bookId, docSnap.id);
+      }
+    });
+
+    if (activeBorrowBadge) activeBorrowBadge.textContent = `${userActiveRecords.length} Records`;
+
+    renderMyBorrowedTable();
+    renderBookTable(allBooks);
+  });
+}
+
+function renderMyBorrowedTable() {
+  if (!myBorrowedTbody) return;
+
+  if (userActiveRecords.length === 0) {
+    myBorrowedTbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-medium">You currently have no active requests or borrowed books.</td></tr>`;
+    if (myBorrowPageInfo) myBorrowPageInfo.textContent = "Page 0 of 0";
+    return;
+  }
+
+  const totalPages = Math.ceil(userActiveRecords.length / myBorrowItemsPerPage);
+  if (myBorrowCurrentPage > totalPages) myBorrowCurrentPage = totalPages;
+  if (myBorrowCurrentPage < 1) myBorrowCurrentPage = 1;
+
+  const startIndex = (myBorrowCurrentPage - 1) * myBorrowItemsPerPage;
+  const pageItems = userActiveRecords.slice(startIndex, startIndex + myBorrowItemsPerPage);
+
+  if (myBorrowPageInfo) myBorrowPageInfo.textContent = `Page ${myBorrowCurrentPage} of ${totalPages}`;
+  if (myBorrowPrevBtn) myBorrowPrevBtn.disabled = myBorrowCurrentPage === 1;
+  if (myBorrowNextBtn) myBorrowNextBtn.disabled = myBorrowCurrentPage === totalPages;
+
+  myBorrowedTbody.innerHTML = pageItems.map((item) => {
+    const dueDateObj = item.dueDate ? new Date(item.dueDate.seconds * 1000) : null;
+    const fineDetails = calculateOverdueFine(dueDateObj);
+
+    let statusBadge = '';
+    if (item.status === 'pending') {
+      statusBadge = `<span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200"><i class="fa-solid fa-hourglass-half mr-1"></i> Pending Approval</span>`;
+    } else if (item.status === 'approved') {
+      if (fineDetails.isOverdue) {
+        statusBadge = `<span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800 border border-red-200 animate-pulse"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Overdue (Fine: ₱${fineDetails.fineAmount}.00)</span>`;
+      } else {
+        statusBadge = `<span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-circle-check mr-1"></i> Approved</span>`;
+      }
+    } else if (item.status === 'declined') {
+      statusBadge = `<span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800 border border-red-200"><i class="fa-solid fa-circle-xmark mr-1"></i> Declined</span>`;
+    } else if (item.status === 'cancelled') {
+      statusBadge = `<span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-ban mr-1"></i> Cancelled</span>`;
+    } else if (item.status === 'returned') {
+      statusBadge = `<span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-rotate-left mr-1"></i> Returned</span>`;
+    }
+
+    return `
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100 sm:border-0">
+        <td class="py-3 px-4">
+          <div class="font-bold text-slate-900 text-sm">${escapeHtml(item.bookTitle)}</div>
+          <div class="text-xs text-slate-500 font-medium">by ${escapeHtml(item.bookAuthor)}</div>
+        </td>
+        <td class="py-3 px-4 text-center">${statusBadge}</td>
+        <td class="py-3 px-4 text-center">
+          ${dueDateObj ? `<span class="font-bold ${fineDetails.isOverdue ? 'text-red-600' : 'text-slate-800'}">${dueDateObj.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' })}</span><div class="text-[10px] text-slate-400 font-medium">Duration: ${item.durationDays || 7} Days</div>` : `<span class="text-slate-400 italic">Awaiting Approval (${item.durationDays || 7} days requested)</span>`}
+        </td>
+        <td class="py-3 px-4 text-center">
+          ${item.status === 'approved' ? `
+            <button onclick="handleReturnAction('${item.bookId}', '${item.id}')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition flex items-center gap-1 mx-auto"><i class="fa-solid fa-rotate-left"></i> Return Book</button>
+          ` : item.status === 'pending' ? `
+            <button onclick="handleCancelMyRequest('${item.id}', '${item.bookId}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition flex items-center gap-1 mx-auto"><i class="fa-solid fa-xmark"></i> Cancel Request</button>
+          ` : `
+            <button onclick="handleDismissRecord('${item.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 transition">Dismiss</button>
+          `}
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+if (myBorrowPrevBtn) {
+  myBorrowPrevBtn.addEventListener("click", () => {
+    if (myBorrowCurrentPage > 1) {
+      myBorrowCurrentPage--;
+      renderMyBorrowedTable();
+    }
+  });
+}
+
+if (myBorrowNextBtn) {
+  myBorrowNextBtn.addEventListener("click", () => {
+    const totalPages = Math.ceil(userActiveRecords.length / myBorrowItemsPerPage);
+    if (myBorrowCurrentPage < totalPages) {
+      myBorrowCurrentPage++;
+      renderMyBorrowedTable();
+    }
+  });
+}
+
+// Student Bookmarks Real-Time & Pagination
+function listenToUserBookmarks(userId) {
+  if (unsubscribeBookmarksSnapshot) unsubscribeBookmarksSnapshot();
+
+  const q = query(bookmarksCollection, where("userId", "==", userId));
+
+  unsubscribeBookmarksSnapshot = onSnapshot(q, (snapshot) => {
+    userBookmarkList = [];
+    studentBookmarkedMap.clear();
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      userBookmarkList.push({ id: docSnap.id, ...data });
+      studentBookmarkedMap.set(data.bookId, docSnap.id);
+    });
+
+    if (bookmarkCountBadge) bookmarkCountBadge.textContent = `${userBookmarkList.length} Saved`;
+    if (profileBookmarkCountBadge) profileBookmarkCountBadge.textContent = `${userBookmarkList.length} Saved`;
+
+    renderBookmarksTable(userBookmarkList, myBookmarksTbody, myBookmarksPageInfo, myBookmarksPrevBtn, myBookmarksNextBtn);
+    renderBookmarksTable(userBookmarkList, profileBookmarksTbody, null, null, null);
+    renderBookTable(allBooks);
+    renderTopBooks(allBooks);
+  });
+}
+
+function renderBookmarksTable(bookmarks, targetTbody, pageInfoEl, prevBtn, nextBtn) {
+  if (!targetTbody) return;
+
+  if (bookmarks.length === 0) {
+    targetTbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-medium">No bookmarked or favorite books yet. Click the heart icon on any book to save it!</td></tr>`;
+    if (pageInfoEl) pageInfoEl.textContent = "Page 0 of 0";
+    return;
+  }
+
+  let displayedItems = bookmarks;
+  if (pageInfoEl) {
+    const totalPages = Math.ceil(bookmarks.length / myBookmarksItemsPerPage);
+    if (myBookmarksCurrentPage > totalPages) myBookmarksCurrentPage = totalPages;
+    if (myBookmarksCurrentPage < 1) myBookmarksCurrentPage = 1;
+
+    const startIndex = (myBookmarksCurrentPage - 1) * myBookmarksItemsPerPage;
+    displayedItems = bookmarks.slice(startIndex, startIndex + myBookmarksItemsPerPage);
+
+    pageInfoEl.textContent = `Page ${myBookmarksCurrentPage} of ${totalPages}`;
+    if (prevBtn) prevBtn.disabled = myBookmarksCurrentPage === 1;
+    if (nextBtn) nextBtn.disabled = myBookmarksCurrentPage === totalPages;
+  }
+
+  targetTbody.innerHTML = displayedItems.map((item) => {
+    const subCatPill = item.subCategory ? `<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200 ml-1">${escapeHtml(item.subCategory)}</span>` : '';
+
+    return `
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100 sm:border-0">
+        <td class="py-3 px-4">
+          <div class="flex items-center gap-3">
+            ${renderBookCoverHTML(item.coverUrl, item.bookTitle, item.category, "w-10 h-14")}
+            <div>
+              <div class="font-bold text-slate-900">${escapeHtml(item.bookTitle)}</div>
+              <div class="text-[11px] text-slate-500 font-medium">by ${escapeHtml(item.bookAuthor)}</div>
+            </div>
+          </div>
+        </td>
+        <td class="py-3 px-3 text-center">
+          <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">${escapeHtml(item.category || 'General')}</span>
+          ${subCatPill}
+        </td>
+        <td class="py-3 px-3 text-center text-slate-500 font-medium">
+          ${item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
+        </td>
+        <td class="py-3 px-4 text-center">
+          <button onclick="handleToggleBookmark('${item.bookId}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition">
+            <i class="fa-solid fa-heart-crack mr-1"></i> Remove
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+if (myBookmarksPrevBtn) {
+  myBookmarksPrevBtn.addEventListener("click", () => {
+    if (myBookmarksCurrentPage > 1) {
+      myBookmarksCurrentPage--;
+      renderBookmarksTable(userBookmarkList, myBookmarksTbody, myBookmarksPageInfo, myBookmarksPrevBtn, myBookmarksNextBtn);
+    }
+  });
+}
+
+if (myBookmarksNextBtn) {
+  myBookmarksNextBtn.addEventListener("click", () => {
+    const totalPages = Math.ceil(userBookmarkList.length / myBookmarksItemsPerPage);
+    if (myBookmarksCurrentPage < totalPages) {
+      myBookmarksCurrentPage++;
+      renderBookmarksTable(userBookmarkList, myBookmarksTbody, myBookmarksPageInfo, myBookmarksPrevBtn, myBookmarksNextBtn);
+    }
+  });
+}
+
+// Render Profile Borrowing History Table
+function renderProfileHistoryTable() {
+  if (!profileHistoryTbody) return;
+
+  if (userHistoryList.length === 0) {
+    profileHistoryTbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-medium">No borrowing history found.</td></tr>`;
+    if (profileHistoryPageInfo) profileHistoryPageInfo.textContent = "Page 0 of 0";
+    return;
+  }
+
+  const totalPages = Math.ceil(userHistoryList.length / profileHistoryItemsPerPage);
+  if (profileHistoryCurrentPage > totalPages) profileHistoryCurrentPage = totalPages;
+  if (profileHistoryCurrentPage < 1) profileHistoryCurrentPage = 1;
+
+  const startIndex = (profileHistoryCurrentPage - 1) * profileHistoryItemsPerPage;
+  const pageItems = userHistoryList.slice(startIndex, startIndex + profileHistoryItemsPerPage);
+
+  if (profileHistoryPageInfo) profileHistoryPageInfo.textContent = `Page ${profileHistoryCurrentPage} of ${totalPages}`;
+  if (profileHistoryPrevBtn) profileHistoryPrevBtn.disabled = profileHistoryCurrentPage === 1;
+  if (profileHistoryNextBtn) profileHistoryNextBtn.disabled = profileHistoryCurrentPage === totalPages;
+
+  profileHistoryTbody.innerHTML = pageItems.map((log) => {
+    const reqDate = log.borrowedAt ? new Date(log.borrowedAt.seconds * 1000).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+    const dueDateObj = log.dueDate ? new Date(log.dueDate.seconds * 1000) : null;
+    const fineDetails = calculateOverdueFine(dueDateObj);
+
+    let statusBadge = '';
+    if (log.status === 'pending') {
+      statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-amber-100 text-amber-800">Pending</span>`;
+    } else if (log.status === 'approved') {
+      if (fineDetails.isOverdue) {
+        statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800 border border-red-200">Overdue (Fine: ₱${fineDetails.fineAmount})</span>`;
+      } else {
+        statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-emerald-100 text-emerald-800">Approved</span>`;
+      }
+    } else if (log.status === 'declined') {
+      statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800">Declined</span>`;
+    } else if (log.status === 'cancelled') {
+      statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700">Cancelled</span>`;
+    } else if (log.status === 'returned') {
+      statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700">Returned</span>`;
+    }
+
+    return `
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100 sm:border-0">
+        <td class="py-3 px-4 font-bold text-slate-800">${escapeHtml(log.bookTitle)}</td>
+        <td class="py-3 px-3 text-center">${statusBadge}</td>
+        <td class="py-3 px-3 text-center text-slate-500 font-medium">${reqDate}</td>
+        <td class="py-3 px-4 text-center font-bold ${fineDetails.isOverdue ? 'text-red-600' : 'text-slate-700'}">
+          ${dueDateObj ? dueDateObj.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+if (profileHistoryPrevBtn) {
+  profileHistoryPrevBtn.addEventListener("click", () => {
+    if (profileHistoryCurrentPage > 1) {
+      profileHistoryCurrentPage--;
+      renderProfileHistoryTable();
+    }
+  });
+}
+
+if (profileHistoryNextBtn) {
+  profileHistoryNextBtn.addEventListener("click", () => {
+    const totalPages = Math.ceil(userHistoryList.length / profileHistoryItemsPerPage);
+    if (profileHistoryCurrentPage < totalPages) {
+      profileHistoryCurrentPage++;
+      renderProfileHistoryTable();
+    }
+  });
+}
+
+// Registered Students Directory in Admin Dashboard
+async function loadRegisteredStudents() {
+  if (!studentTbody) return;
+
+  try {
+    const querySnapshot = await getDocs(usersCollection);
+    const usersList = [];
+
+    querySnapshot.forEach((docSnap) => {
+      usersList.push({ id: docSnap.id, ...docSnap.data() });
+    });
+
+    if (studentCountBadge) studentCountBadge.textContent = `${usersList.length} Accounts`;
+
+    if (usersList.length === 0) {
+      studentTbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">No user accounts found.</td></tr>`;
+      return;
+    }
+
+    studentTbody.innerHTML = usersList.map((usr) => {
+      const isApproved = usr.approved === true;
+      const isAdminRole = usr.role === "admin";
+      const fullName = usr.displayName || `${usr.firstName || ''} ${usr.lastName || ''}`.trim() || usr.email.split("@")[0];
+
+      return `
+        <tr class="hover:bg-slate-50 transition border-b border-slate-100 sm:border-0">
+          <td class="py-3 px-3 sm:px-4 font-bold text-slate-900">${escapeHtml(usr.studentId || 'N/A')}</td>
+          <td class="py-3 px-3 sm:px-4 font-semibold text-slate-800">
+            <div class="font-bold text-slate-900 text-xs sm:text-sm">${escapeHtml(fullName)}</div>
+            <div class="text-[11px] text-slate-400 font-normal">${escapeHtml(usr.email)}</div>
+          </td>
+          <td class="py-3 px-2 sm:px-3 text-center">
+            ${isAdminRole ? `<span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-amber-100 text-amber-800 border border-amber-200"><i class="fa-solid fa-user-shield mr-1"></i> Admin</span>` : isApproved ? `<span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-check mr-1"></i> Student</span>` : `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200"><i class="fa-solid fa-clock mr-1"></i> Pending</span>`}
+          </td>
+          <td class="py-3 px-3 sm:px-4 text-center">
+            <div class="flex flex-col sm:flex-row justify-center items-center gap-1.5">
+              ${!isApproved && !isAdminRole ? `<button onclick="handleApproveStudent('${usr.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition">Approve</button>` : ''}
+              <button onclick="handleSendUserPasswordReset('${escapeHtml(usr.email)}')" class="px-2 py-1 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition flex items-center justify-center gap-1"><i class="fa-solid fa-key"></i> Reset</button>
+              ${!isAdminRole ? `<button onclick="handleTransferAdminRole('${usr.id}', '${escapeHtml(usr.email)}')" class="px-2 py-1 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition">Promote</button>` : `<span class="text-xs text-slate-400 italic">Active Admin</span>`}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  } catch (err) {
+    console.error("Error loading student directory:", err);
+  }
+}
+
+// Render Borrowing History Table for Admin Dashboard
+function renderStudentRecordsTable() {
+  if (!allRecordsTbody) return;
+
+  if (activeStudentRecords.length === 0) {
+    allRecordsTbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400 font-medium">No active student borrowing records found.</td></tr>`;
+    if (recordsPageInfo) recordsPageInfo.textContent = "Page 0 of 0";
+    return;
+  }
+
+  const totalPages = Math.ceil(activeStudentRecords.length / recordsItemsPerPage);
+  if (recordsCurrentPage > totalPages) recordsCurrentPage = totalPages;
+  if (recordsCurrentPage < 1) recordsCurrentPage = 1;
+
+  const startIndex = (recordsCurrentPage - 1) * recordsItemsPerPage;
+  const pageItems = activeStudentRecords.slice(startIndex, startIndex + recordsItemsPerPage);
+
+  if (recordsPageInfo) recordsPageInfo.textContent = `Page ${recordsCurrentPage} of ${totalPages}`;
+  if (recordsPrevBtn) recordsPrevBtn.disabled = recordsCurrentPage === 1;
+  if (recordsNextBtn) recordsNextBtn.disabled = recordsCurrentPage === totalPages;
+
+  allRecordsTbody.innerHTML = pageItems.map((rec) => {
+    const dueDateObj = rec.dueDate ? new Date(rec.dueDate.seconds * 1000) : null;
+    const fineDetails = calculateOverdueFine(dueDateObj);
+    const dueDateStr = dueDateObj ? dueDateObj.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
+
+    let statusBadge = '';
+    if (rec.status === 'pending') {
+      statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-amber-100 text-amber-800">Pending</span>`;
+    } else if (rec.status === 'approved') {
+      if (fineDetails.isOverdue && !rec.finePaid) {
+        statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800 border border-red-200"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Overdue (${fineDetails.daysLate}d)</span>`;
+      } else {
+        statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-emerald-100 text-emerald-800">Approved</span>`;
+      }
+    } else if (rec.status === 'declined') {
+      statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800">Declined</span>`;
+    } else if (rec.status === 'returned') {
+      statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700">Returned</span>`;
+    }
+
+    return `
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100 sm:border-0">
+        <td class="py-3 px-3 sm:px-4">
+          <div class="font-bold text-indigo-900">ID: ${escapeHtml(rec.studentId || 'N/A')}</div>
+          <div class="text-xs font-semibold text-slate-800">${escapeHtml(rec.userEmail)}</div>
+        </td>
+        <td class="py-3 px-3 sm:px-4 font-bold text-slate-900">${escapeHtml(rec.bookTitle)}</td>
+        <td class="py-3 px-2 sm:px-3 text-center">${statusBadge}</td>
+        <td class="py-3 px-2 sm:px-3 text-center font-bold text-slate-700">${dueDateStr}</td>
+        <td class="py-3 px-3 sm:px-4 text-center">
+          <div class="flex flex-col sm:flex-row justify-center items-center gap-1.5">
+            ${rec.status === 'approved' ? `
+              <button onclick="handleSendEmailNotification('${escapeHtml(rec.userEmail)}', '${escapeHtml(rec.bookTitle)}', '${dueDateStr}', ${fineDetails.fineAmount})" class="px-2 py-1 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition">
+                <i class="fa-solid fa-paper-plane"></i> Email
+              </button>
+            ` : ''}
+            <button onclick="handleRemoveBorrowRecord('${rec.id}')" class="px-2 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition">
+              <i class="fa-solid fa-trash-can"></i> Remove
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+// Modal Summary View Handler
 window.openSummaryModal = (title, author, summaryText, category = "General", imageUrl = "", subCategory = "") => {
   const modal = document.getElementById("summary-modal");
   const modalTitle = document.getElementById("modal-book-title");
@@ -294,73 +939,6 @@ window.handleToggleBookmark = async (bookId) => {
     alert("Failed to update bookmark: " + err.message);
   }
 };
-
-// Real-time Bookmark Listener
-function listenToUserBookmarks(userId) {
-  if (unsubscribeBookmarksSnapshot) unsubscribeBookmarksSnapshot();
-
-  const q = query(bookmarksCollection, where("userId", "==", userId));
-
-  unsubscribeBookmarksSnapshot = onSnapshot(q, (snapshot) => {
-    const bookmarkedList = [];
-    studentBookmarkedMap.clear();
-
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      bookmarkedList.push({ id: docSnap.id, ...data });
-      studentBookmarkedMap.set(data.bookId, docSnap.id);
-    });
-
-    if (bookmarkCountBadge) bookmarkCountBadge.textContent = `${bookmarkedList.length} Saved`;
-    if (profileBookmarkCountBadge) profileBookmarkCountBadge.textContent = `${bookmarkedList.length} Saved`;
-
-    renderBookmarksTable(bookmarkedList, myBookmarksTbody);
-    renderBookmarksTable(bookmarkedList, profileBookmarksTbody);
-    renderBookTable(allBooks);
-    renderTopBooks(allBooks);
-  });
-}
-
-function renderBookmarksTable(bookmarks, targetTbody) {
-  if (!targetTbody) return;
-
-  if (bookmarks.length === 0) {
-    targetTbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-medium">No bookmarked or favorite books yet. Click the heart icon on any book to save it!</td></tr>`;
-    return;
-  }
-
-  targetTbody.innerHTML = bookmarks.map((item) => {
-    const subCatPill = item.subCategory ? `<span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-100 text-slate-600 border border-slate-200 ml-1">${escapeHtml(item.subCategory)}</span>` : '';
-
-    return `
-      <tr class="hover:bg-slate-50 transition">
-        <td class="py-3 px-4">
-          <div class="flex items-center gap-3">
-            ${renderBookCoverHTML(item.coverUrl, item.bookTitle, item.category, "w-10 h-14")}
-            <div>
-              <div class="font-bold text-slate-900">${escapeHtml(item.bookTitle)}</div>
-              <div class="text-[11px] text-slate-500 font-medium">by ${escapeHtml(item.bookAuthor)}</div>
-            </div>
-          </div>
-        </td>
-        <td class="py-3 px-3 text-center">
-          <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">${escapeHtml(item.category || 'General')}</span>
-          ${subCatPill}
-        </td>
-        <td class="py-3 px-3 text-center text-slate-500 font-medium">
-          ${item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}
-        </td>
-        <td class="py-3 px-4 text-center">
-          <div class="flex items-center justify-center gap-2">
-            <button onclick="handleToggleBookmark('${item.bookId}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition">
-              <i class="fa-solid fa-heart-crack mr-1"></i> Remove
-            </button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join("");
-}
 
 // CSV Export Handler
 window.exportBorrowingRecordsToCSV = () => {
@@ -463,38 +1041,6 @@ function switchAdminTab(targetTab) {
 ["catalog", "pending", "borrowing", "fines", "students"].forEach(tab => {
   document.getElementById(`tab-btn-${tab}`)?.addEventListener("click", () => switchAdminTab(tab));
 });
-
-// Sync User Profile
-async function syncUserProfile(user, inputStudentId = "", firstName = "", lastName = "") {
-  const userRef = doc(db, "users", user.uid);
-  const userSnap = await getDoc(userRef);
-
-  let formattedDisplayName = user.displayName;
-  if (firstName || lastName) {
-    formattedDisplayName = `${firstName} ${lastName}`.trim();
-  }
-
-  if (!userSnap.exists()) {
-    const newUserData = {
-      email: user.email,
-      firstName: firstName || "",
-      lastName: lastName || "",
-      displayName: formattedDisplayName || user.email.split("@")[0],
-      studentId: inputStudentId || "N/A",
-      role: "student",
-      approved: false,
-      createdAt: new Date()
-    };
-    await setDoc(userRef, newUserData);
-    currentUserRole = "student";
-    currentUserApproved = false;
-  } else {
-    const data = userSnap.data();
-    currentUserRole = data.role || "student";
-    currentUserApproved = data.approved !== undefined ? data.approved : true;
-  }
-  return { role: currentUserRole, approved: currentUserApproved };
-}
 
 // Category Pills & Management
 function renderCategoryPills(books) {
@@ -838,93 +1384,6 @@ function listenToAllStudentRecords() {
   });
 }
 
-// Render Active & Completed Borrowing History Table
-function renderStudentRecordsTable() {
-  if (!allRecordsTbody) return;
-
-  if (activeStudentRecords.length === 0) {
-    allRecordsTbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400 font-medium">No active student borrowing records found.</td></tr>`;
-    if (recordsPageInfo) recordsPageInfo.textContent = "Page 0 of 0";
-    return;
-  }
-
-  const totalPages = Math.ceil(activeStudentRecords.length / recordsItemsPerPage);
-  if (recordsCurrentPage > totalPages) recordsCurrentPage = totalPages;
-  if (recordsCurrentPage < 1) recordsCurrentPage = 1;
-
-  const startIndex = (recordsCurrentPage - 1) * recordsItemsPerPage;
-  const pageItems = activeStudentRecords.slice(startIndex, startIndex + recordsItemsPerPage);
-
-  if (recordsPageInfo) recordsPageInfo.textContent = `Page ${recordsCurrentPage} of ${totalPages}`;
-  if (recordsPrevBtn) recordsPrevBtn.disabled = recordsCurrentPage === 1;
-  if (recordsNextBtn) recordsNextBtn.disabled = recordsCurrentPage === totalPages;
-
-  allRecordsTbody.innerHTML = pageItems.map((rec) => {
-    const dueDateObj = rec.dueDate ? new Date(rec.dueDate.seconds * 1000) : null;
-    const fineDetails = calculateOverdueFine(dueDateObj);
-    const dueDateStr = dueDateObj ? dueDateObj.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }) : '-';
-
-    let statusBadge = '';
-    if (rec.status === 'pending') {
-      statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-amber-100 text-amber-800">Pending</span>`;
-    } else if (rec.status === 'approved') {
-      if (fineDetails.isOverdue && !rec.finePaid) {
-        statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800 border border-red-200"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Overdue (${fineDetails.daysLate}d)</span>`;
-      } else {
-        statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-emerald-100 text-emerald-800">Approved</span>`;
-      }
-    } else if (rec.status === 'declined') {
-      statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800">Declined</span>`;
-    } else if (rec.status === 'returned') {
-      statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700">Returned</span>`;
-    }
-
-    return `
-      <tr class="hover:bg-slate-50 transition">
-        <td class="py-3 px-3 sm:px-4">
-          <div class="font-bold text-indigo-900">ID: ${escapeHtml(rec.studentId || 'N/A')}</div>
-          <div class="text-[11px] text-slate-500">${escapeHtml(rec.userEmail)}</div>
-        </td>
-        <td class="py-3 px-3 sm:px-4 font-bold text-slate-900">${escapeHtml(rec.bookTitle)}</td>
-        <td class="py-3 px-2 sm:px-3 text-center">${statusBadge}</td>
-        <td class="py-3 px-2 sm:px-3 text-center font-bold text-slate-700">${dueDateStr}</td>
-        <td class="py-3 px-3 sm:px-4 text-center">
-          <div class="flex flex-col sm:flex-row justify-center items-center gap-1.5">
-            ${rec.status === 'approved' ? `
-              <button onclick="handleSendEmailNotification('${escapeHtml(rec.userEmail)}', '${escapeHtml(rec.bookTitle)}', '${dueDateStr}', ${fineDetails.fineAmount})" class="px-2 py-1 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition">
-                <i class="fa-solid fa-paper-plane"></i> Email
-              </button>
-            ` : ''}
-            <button onclick="handleRemoveBorrowRecord('${rec.id}')" class="px-2 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition">
-              <i class="fa-solid fa-trash-can"></i> Remove
-            </button>
-          </div>
-        </td>
-      </tr>
-    `;
-  }).join("");
-}
-
-// Pagination Event Listeners for Borrowing History Table
-if (recordsPrevBtn) {
-  recordsPrevBtn.addEventListener("click", () => {
-    if (recordsCurrentPage > 1) {
-      recordsCurrentPage--;
-      renderStudentRecordsTable();
-    }
-  });
-}
-
-if (recordsNextBtn) {
-  recordsNextBtn.addEventListener("click", () => {
-    const totalPages = Math.ceil(activeStudentRecords.length / recordsItemsPerPage);
-    if (recordsCurrentPage < totalPages) {
-      recordsCurrentPage++;
-      renderStudentRecordsTable();
-    }
-  });
-}
-
 // Render Cancelled Requests History Table
 function renderCancelledRequestsTable() {
   if (!cancelledRequestsTbody) return;
@@ -1083,54 +1542,6 @@ window.handleLeaveAdminRole = async () => {
   }
 };
 
-// Registered Students Directory
-async function loadRegisteredStudents() {
-  if (!studentTbody) return;
-
-  try {
-    const querySnapshot = await getDocs(usersCollection);
-    const usersList = [];
-
-    querySnapshot.forEach((docSnap) => {
-      usersList.push({ id: docSnap.id, ...docSnap.data() });
-    });
-
-    if (studentCountBadge) studentCountBadge.textContent = `${usersList.length} Accounts`;
-
-    if (usersList.length === 0) {
-      studentTbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">No user accounts found.</td></tr>`;
-      return;
-    }
-
-    studentTbody.innerHTML = usersList.map((usr) => {
-      const isApproved = usr.approved === true;
-      const isAdminRole = usr.role === "admin";
-
-      return `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="py-3 px-3 sm:px-4 font-bold text-slate-900">${escapeHtml(usr.studentId || 'N/A')}</td>
-          <td class="py-3 px-3 sm:px-4 font-semibold text-slate-800">
-            ${escapeHtml(usr.displayName || usr.email)}
-            <div class="text-[11px] text-slate-400 font-normal">${escapeHtml(usr.email)}</div>
-          </td>
-          <td class="py-3 px-2 sm:px-3 text-center">
-            ${isAdminRole ? `<span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-amber-100 text-amber-800 border border-amber-200"><i class="fa-solid fa-user-shield mr-1"></i> Admin</span>` : isApproved ? `<span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-check mr-1"></i> Student</span>` : `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200"><i class="fa-solid fa-clock mr-1"></i> Pending</span>`}
-          </td>
-          <td class="py-3 px-3 sm:px-4 text-center">
-            <div class="flex flex-col sm:flex-row justify-center items-center gap-1.5">
-              ${!isApproved && !isAdminRole ? `<button onclick="handleApproveStudent('${usr.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white transition">Approve</button>` : ''}
-              <button onclick="handleSendUserPasswordReset('${escapeHtml(usr.email)}')" class="px-2 py-1 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition flex items-center justify-center gap-1"><i class="fa-solid fa-key"></i> Reset</button>
-              ${!isAdminRole ? `<button onclick="handleTransferAdminRole('${usr.id}', '${escapeHtml(usr.email)}')" class="px-2 py-1 text-xs font-semibold rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition">Promote</button>` : `<span class="text-xs text-slate-400 italic">Active Admin</span>`}
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join("");
-  } catch (err) {
-    console.error("Error loading student directory:", err);
-  }
-}
-
 window.handleTransferAdminRole = async (targetUserId, userEmail) => {
   if (currentUserRole !== "admin") {
     alert("Only active Admins can grant or transfer Admin privileges.");
@@ -1197,242 +1608,6 @@ if (adminResetPwdBtn) {
   });
 }
 
-// Auth State Observer
-onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    const userProfileStatus = await syncUserProfile(user);
-    const role = userProfileStatus.role;
-    const isApproved = userProfileStatus.approved;
-
-    // 1. Block unapproved students
-    if (role === "student" && !isApproved) {
-      if (isLoginPage && authError) {
-        authError.textContent = "Your account is pending verification by the Library Admin.";
-        authError.classList.remove("hidden");
-      } else {
-        alert("Your account is currently pending Admin verification.");
-        await signOut(auth);
-        window.location.href = "login.html";
-        return;
-      }
-    }
-
-    // 2. Redirect logged-in users away from login page to index.html (or admin dashboard if admin)
-    if (isLoginPage && isApproved) {
-      window.location.href = role === "admin" ? "admin-dashboard.html" : "index.html";
-      return;
-    }
-
-    // 3. Restrict admin-only dashboard access
-    if (isAdminPage && role !== "admin") {
-      alert("Access Denied: Only Admins can access the Admin Control Panel.");
-      window.location.href = "index.html";
-      return;
-    }
-
-    // 4. Update Header UI for logged-in user across all pages (index.html, profile.html, etc.)
-    if (loginNavBtn) loginNavBtn.classList.add("hidden");
-    if (userProfile) {
-      userProfile.classList.remove("hidden");
-      userProfile.classList.add("flex");
-    }
-
-    if (dashboardPortalBtn) {
-      dashboardPortalBtn.href = role === "admin" ? "admin-dashboard.html" : "student-dashboard.html";
-    }
-
-    if (userEmailDisplay) {
-      userEmailDisplay.innerHTML = `
-        <span class="break-all">${user.email}</span>
-        <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase rounded-md ${role === 'admin' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'}">
-          ${role}
-        </span>
-      `;
-    }
-
-    // 5. Admin-specific initializations
-    if (isAdminPage) {
-      loadRegisteredStudents();
-      listenToPendingBorrowRequests();
-      listenToAllStudentRecords();
-
-      const editId = sessionStorage.getItem("editBookId");
-      if (editId) {
-        sessionStorage.removeItem("editBookId");
-        switchAdminTab("catalog");
-        setTimeout(() => window.populateEditForm(editId), 300);
-      }
-    }
-
-    // 6. Listeners & Profile Details
-    listenToStudentBorrowedBooks(user.uid);
-    listenToUserBookmarks(user.uid);
-
-    if (isProfilePage) {
-      loadStudentProfileDetails(user);
-    }
-  } else {
-    // Logged Out State
-    currentUserRole = "student";
-    currentUserApproved = false;
-    studentActiveBorrowedMap.clear();
-    studentBorrowRecordMap.clear();
-    studentBookmarkedMap.clear();
-
-    if (isAdminPage || isStudentPage || isProfilePage) {
-      window.location.href = "login.html";
-      return;
-    }
-
-    if (loginNavBtn) loginNavBtn.classList.remove("hidden");
-    if (userProfile) {
-      userProfile.classList.add("hidden");
-      userProfile.classList.remove("flex");
-    }
-  }
-
-  // Load books collection for catalog
-  listenToBookCollection();
-});
-
-// Load Profile Details
-async function loadStudentProfileDetails(user) {
-  if (profileEmailDisplay) profileEmailDisplay.textContent = user.email;
-
-  const leaveAdminSection = document.getElementById("leave-admin-section");
-
-  try {
-    const userSnap = await getDoc(doc(db, "users", user.uid));
-    if (userSnap.exists()) {
-      const userData = userSnap.data();
-      const currentId = userData.studentId || "N/A";
-      const nameToShow = userData.displayName || user.displayName || user.email.split("@")[0];
-
-      if (profileNameDisplay) {
-        profileNameDisplay.textContent = `${nameToShow} (ID: ${currentId})`;
-      }
-      
-      if (editStudentIdInput) editStudentIdInput.value = currentId !== "N/A" ? currentId : "";
-
-      if (userData.createdAt && profileRegDate) {
-        profileRegDate.textContent = new Date(userData.createdAt.seconds * 1000).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' });
-      }
-
-      if (userData.role === "admin" && leaveAdminSection) leaveAdminSection.classList.remove("hidden");
-    }
-  } catch (err) {
-    console.error("Error loading profile details:", err);
-  }
-
-  if (saveStudentIdBtn && editStudentIdInput) {
-    saveStudentIdBtn.onclick = async () => {
-      const newStudentId = editStudentIdInput.value.trim();
-      if (!newStudentId) return;
-
-      try {
-        await updateDoc(doc(db, "users", user.uid), { studentId: newStudentId });
-        const userSnap = await getDoc(doc(db, "users", user.uid));
-        const updatedName = userSnap.exists() ? (userSnap.data().displayName || user.email.split("@")[0]) : user.email.split("@")[0];
-        
-        if (profileNameDisplay) profileNameDisplay.textContent = `${updatedName} (ID: ${newStudentId})`;
-        if (idUpdateAlert) {
-          idUpdateAlert.textContent = "Student ID updated successfully!";
-          idUpdateAlert.className = "p-3 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200";
-          idUpdateAlert.classList.remove("hidden");
-        }
-      } catch (err) {
-        if (idUpdateAlert) {
-          idUpdateAlert.textContent = "Failed to update ID: " + err.message;
-          idUpdateAlert.className = "p-3 rounded-xl text-xs font-semibold bg-red-50 text-red-800 border border-red-200";
-          idUpdateAlert.classList.remove("hidden");
-        }
-      }
-    };
-  }
-
-  const q = query(borrowedCollection, where("userId", "==", user.uid));
-  onSnapshot(q, (snapshot) => {
-    const logs = [];
-    let approved = 0;
-    let pending = 0;
-
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      logs.push({ id: docSnap.id, ...data });
-      if (data.status === 'approved') approved++;
-      if (data.status === 'pending') pending++;
-    });
-
-    if (statApprovedCount) statApprovedCount.textContent = approved;
-    if (statPendingCount) statPendingCount.textContent = pending;
-    if (statTotalCount) statTotalCount.textContent = logs.length;
-    if (historyCountBadge) historyCountBadge.textContent = `${logs.length} Items`;
-
-    if (!profileHistoryTbody) return;
-
-    if (logs.length === 0) {
-      profileHistoryTbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-medium">No borrowing history found.</td></tr>`;
-      return;
-    }
-
-    profileHistoryTbody.innerHTML = logs.map((log) => {
-      const reqDate = log.borrowedAt ? new Date(log.borrowedAt.seconds * 1000).toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
-      const dueDateObj = log.dueDate ? new Date(log.dueDate.seconds * 1000) : null;
-      const fineDetails = calculateOverdueFine(dueDateObj);
-
-      let statusBadge = '';
-      if (log.status === 'pending') {
-        statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-amber-100 text-amber-800">Pending</span>`;
-      } else if (log.status === 'approved') {
-        if (fineDetails.isOverdue) {
-          statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800 border border-red-200">Overdue (Fine: ₱${fineDetails.fineAmount})</span>`;
-        } else {
-          statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-emerald-100 text-emerald-800">Approved</span>`;
-        }
-      } else if (log.status === 'declined') {
-        statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800">Declined</span>`;
-      } else if (log.status === 'cancelled') {
-        statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700">Cancelled</span>`;
-      } else if (log.status === 'returned') {
-        statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700">Returned</span>`;
-      }
-
-      return `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="py-3 px-4 font-bold text-slate-800">${escapeHtml(log.bookTitle)}</td>
-          <td class="py-3 px-3 text-center">${statusBadge}</td>
-          <td class="py-3 px-3 text-center text-slate-500 font-medium">${reqDate}</td>
-          <td class="py-3 px-4 text-center font-bold ${fineDetails.isOverdue ? 'text-red-600' : 'text-slate-700'}">
-            ${dueDateObj ? dueDateObj.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
-          </td>
-        </tr>
-      `;
-    }).join("");
-  });
-}
-
-if (resetPasswordBtn) {
-  resetPasswordBtn.addEventListener("click", async () => {
-    const user = auth.currentUser;
-    if (!user || !user.email) return;
-
-    try {
-      await sendPasswordResetEmail(auth, user.email);
-      if (resetAlert) {
-        resetAlert.textContent = `A password reset link was sent to ${user.email}. Check inbox!`;
-        resetAlert.className = "p-3 text-xs rounded-xl font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200";
-        resetAlert.classList.remove("hidden");
-      }
-    } catch (err) {
-      if (resetAlert) {
-        resetAlert.textContent = err.message;
-        resetAlert.className = "p-3 text-xs rounded-xl font-semibold bg-red-50 text-red-800 border border-red-200";
-        resetAlert.classList.remove("hidden");
-      }
-    }
-  });
-}
-
 function listenToPendingBorrowRequests() {
   if (unsubscribePendingSnapshot) unsubscribePendingSnapshot();
 
@@ -1476,83 +1651,6 @@ function listenToPendingBorrowRequests() {
               <button onclick="handleApproveRequest('${req.id}', '${req.bookId}', ${duration})" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition"><i class="fa-solid fa-check mr-1"></i> Approve</button>
               <button onclick="handleDeclineRequest('${req.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition"><i class="fa-solid fa-xmark mr-1"></i> Decline</button>
             </div>
-          </td>
-        </tr>
-      `;
-    }).join("");
-  });
-}
-
-function listenToStudentBorrowedBooks(userId) {
-  if (unsubscribeBorrowedSnapshot) unsubscribeBorrowedSnapshot();
-
-  const q = query(borrowedCollection, where("userId", "==", userId));
-
-  unsubscribeBorrowedSnapshot = onSnapshot(q, (snapshot) => {
-    const userRecords = [];
-    studentActiveBorrowedMap.clear();
-    studentBorrowRecordMap.clear();
-
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      userRecords.push({ id: docSnap.id, ...data });
-
-      if (data.status === "pending" || data.status === "approved") {
-        studentActiveBorrowedMap.set(data.bookId, data.status);
-        studentBorrowRecordMap.set(data.bookId, docSnap.id);
-      }
-    });
-
-    if (activeBorrowBadge) activeBorrowBadge.textContent = `${userRecords.length} Records`;
-
-    renderBookTable(allBooks);
-
-    if (!myBorrowedTbody) return;
-
-    if (userRecords.length === 0) {
-      myBorrowedTbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-medium">You currently have no active requests or borrowed books.</td></tr>`;
-      return;
-    }
-
-    myBorrowedTbody.innerHTML = userRecords.map((item) => {
-      const dueDateObj = item.dueDate ? new Date(item.dueDate.seconds * 1000) : null;
-      const fineDetails = calculateOverdueFine(dueDateObj);
-
-      let statusBadge = '';
-      if (item.status === 'pending') {
-        statusBadge = `<span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-amber-100 text-amber-800 border border-amber-200"><i class="fa-solid fa-hourglass-half mr-1"></i> Pending Approval</span>`;
-      } else if (item.status === 'approved') {
-        if (fineDetails.isOverdue) {
-          statusBadge = `<span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800 border border-red-200 animate-pulse"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Overdue (Fine: ₱${fineDetails.fineAmount}.00)</span>`;
-        } else {
-          statusBadge = `<span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-circle-check mr-1"></i> Approved</span>`;
-        }
-      } else if (item.status === 'declined') {
-        statusBadge = `<span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800 border border-red-200"><i class="fa-solid fa-circle-xmark mr-1"></i> Declined</span>`;
-      } else if (item.status === 'cancelled') {
-        statusBadge = `<span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-ban mr-1"></i> Cancelled</span>`;
-      } else if (item.status === 'returned') {
-        statusBadge = `<span class="px-2.5 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700 border border-slate-200"><i class="fa-solid fa-rotate-left mr-1"></i> Returned</span>`;
-      }
-
-      return `
-        <tr class="hover:bg-slate-50 transition">
-          <td class="py-3 px-5">
-            <div class="font-bold text-slate-900">${escapeHtml(item.bookTitle)}</div>
-            <div class="text-xs text-slate-500 font-medium">by ${escapeHtml(item.bookAuthor)}</div>
-          </td>
-          <td class="py-3 px-4 text-center">${statusBadge}</td>
-          <td class="py-3 px-4 text-center">
-            ${dueDateObj ? `<span class="font-bold ${fineDetails.isOverdue ? 'text-red-600' : 'text-slate-800'}">${dueDateObj.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' })}</span><div class="text-[10px] text-slate-400 font-medium">Duration: ${item.durationDays || 7} Days</div>` : `<span class="text-slate-400 italic">Awaiting Approval (${item.durationDays || 7} days requested)</span>`}
-          </td>
-          <td class="py-3 px-5 text-center">
-            ${item.status === 'approved' ? `
-              <button onclick="handleReturnAction('${item.bookId}', '${item.id}')" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition flex items-center gap-1 mx-auto"><i class="fa-solid fa-rotate-left"></i> Return Book</button>
-            ` : item.status === 'pending' ? `
-              <button onclick="handleCancelMyRequest('${item.id}', '${item.bookId}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition flex items-center gap-1 mx-auto"><i class="fa-solid fa-xmark"></i> Cancel Request</button>
-            ` : `
-              <button onclick="handleDismissRecord('${item.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 transition">Dismiss</button>
-            `}
           </td>
         </tr>
       `;
