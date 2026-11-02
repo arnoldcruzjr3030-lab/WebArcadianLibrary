@@ -343,6 +343,7 @@
           <i class="fa-solid fa-file-csv"></i> Export CSV
         </button>
       </div>
+
       <div class="overflow-x-auto rounded-xl border border-slate-100">
         <table class="w-full min-w-[620px] text-left border-collapse">
           <thead>
@@ -357,6 +358,16 @@
           <tbody id="all-records-tbody" class="divide-y divide-slate-100 text-xs font-medium"></tbody>
         </table>
       </div>
+
+      <!-- BORROW RECORDS PAGINATION CONTROLS -->
+      <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+        <span id="records-page-info" class="text-slate-400 font-semibold">Page 1 of 1</span>
+        <div class="flex items-center gap-2">
+          <button id="records-prev-btn" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 font-bold transition">Prev</button>
+          <button id="records-next-btn" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 font-bold transition">Next</button>
+        </div>
+      </div>
+
       <div class="pt-5 border-t border-slate-100">
         <div class="flex items-center justify-between mb-3">
           <h4 class="font-bold text-xs uppercase tracking-wider text-slate-400">Cancelled Request Logs</h4>
