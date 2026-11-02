@@ -201,11 +201,11 @@
       </div>
     </div>
 
-    <!-- Personal Borrowing History with Pagination Controls -->
+    <!-- Personal Borrowed Books with Pagination Controls -->
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-4 sm:p-6 space-y-4">
       <div class="flex items-center justify-between gap-2 pb-2 border-b sm:border-b-0 border-slate-100">
         <h3 class="text-sm sm:text-base font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-clock-rotate-left text-indigo-600"></i> Personal History & Fines
+          <i class="fa-solid fa-book-bookmark text-indigo-600"></i> Borrowed Books
         </h3>
         <span id="history-count-badge" class="text-[11px] sm:text-xs bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full font-bold flex-shrink-0">0 Items</span>
       </div>
@@ -219,18 +219,19 @@
                 <th class="py-3 px-3 text-center">Status</th>
                 <th class="py-3 px-3 text-center">Request Date</th>
                 <th class="py-3 px-4 text-center">Due Date & Fine Amount</th>
+                <th class="py-3 px-4 text-center">Action</th>
               </tr>
             </thead>
             <tbody id="profile-history-tbody" class="divide-y divide-slate-100 text-xs block sm:table-row-group">
               <tr class="block sm:table-row p-4 sm:p-0">
-                <td colspan="4" class="py-6 text-center text-slate-400 font-medium block sm:table-cell">Loading history...</td>
+                <td colspan="5" class="py-6 text-center text-slate-400 font-medium block sm:table-cell">Loading borrowed books...</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Pagination Footer for History -->
+      <!-- Pagination Footer for Borrowed Books -->
       <div class="flex items-center justify-between pt-3 border-t border-slate-100 text-xs">
         <span id="profile-history-page-info" class="text-slate-500 font-medium">Page 1 of 1</span>
         <div class="flex items-center gap-2">
@@ -249,7 +250,7 @@
   <!-- Footer -->
   <footer class="bg-slate-900 text-slate-400 text-xs py-6 border-t border-slate-800">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 text-center space-y-1">
-      <p class="font-semibold text-slate-300">Arcadian School Library Management System</p>
+      <p class="font-semibold text-slate-300">Arcadian School Library System</p>
       <p>&copy; 2026 Arcadian Library. All rights reserved.</p>
     </div>
   </footer>
