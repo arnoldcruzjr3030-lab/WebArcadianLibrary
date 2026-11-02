@@ -1483,6 +1483,8 @@ function renderStudentRecordsTable() {
   if (activeStudentRecords.length === 0) {
     allRecordsTbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400 font-medium">No active student borrowing records found.</td></tr>`;
     if (recordsPageInfo) recordsPageInfo.textContent = "Page 0 of 0";
+    if (recordsPrevBtn) recordsPrevBtn.disabled = true;
+    if (recordsNextBtn) recordsNextBtn.disabled = true;
     return;
   }
 
@@ -1541,6 +1543,25 @@ function renderStudentRecordsTable() {
       </tr>
     `;
   }).join("");
+}
+
+if (recordsPrevBtn) {
+  recordsPrevBtn.addEventListener("click", () => {
+    if (recordsCurrentPage > 1) {
+      recordsCurrentPage--;
+      renderStudentRecordsTable();
+    }
+  });
+}
+
+if (recordsNextBtn) {
+  recordsNextBtn.addEventListener("click", () => {
+    const totalPages = Math.ceil(activeStudentRecords.length / recordsItemsPerPage);
+    if (recordsCurrentPage < totalPages) {
+      recordsCurrentPage++;
+      renderStudentRecordsTable();
+    }
+  });
 }
 
 window.handleToggleBookmark = async (bookId) => {
@@ -2017,7 +2038,7 @@ if (isLoginPage) {
         authSubtitle.textContent = "Sign in to access Arcadian Library Portal";
         authSubmitBtn.textContent = "Sign In";
         toggleAuthModeBtn.textContent = "Don't have an account? Sign Up";
-        if (signupFieldsContainer) signupFieldsContainer.add("hidden");
+        if (signupFieldsContainer) signupFieldsContainer.classList.add("hidden");
         if (studentIdContainer) studentIdContainer.classList.add("hidden");
       }
     });
