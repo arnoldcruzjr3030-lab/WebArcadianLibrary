@@ -150,6 +150,11 @@ const quickPickDropdown = document.getElementById("quick-pick-dropdown");
 const filteredCountBadge = document.getElementById("filtered-count-badge");
 const totalBooksCounter = document.getElementById("total-books-counter");
 
+// DOM Elements for Books Directory Page Pagination
+const gridPrevBtn = document.getElementById("grid-prev-btn");
+const gridNextBtn = document.getElementById("grid-next-btn");
+const gridPageInfo = document.getElementById("grid-page-info");
+
 // Profile DOM Elements
 const profileNameDisplay = document.getElementById("profile-name-display");
 const profileEmailDisplay = document.getElementById("profile-email-display");
@@ -231,6 +236,9 @@ const myBookmarksItemsPerPage = 5;
 
 let profileHistoryCurrentPage = 1;
 const profileHistoryItemsPerPage = 5;
+
+let gridCurrentPage = 1;
+const gridItemsPerPage = 6; // Shows 6 books per page on books.html
 
 const DAILY_FINE_RATE = 10;
 
@@ -326,14 +334,31 @@ function renderBooksCatalogGrid(books) {
         <p class="font-medium">No books found matching the selected genre and search criteria.</p>
       </div>
     `;
+    if (gridPageInfo) gridPageInfo.textContent = "Page 0 of 0";
+    if (gridPrevBtn) gridPrevBtn.disabled = true;
+    if (gridNextBtn) gridNextBtn.disabled = true;
     return;
   }
 
+  // Calculate Pagination
+  const totalPages = Math.ceil(filtered.length / gridItemsPerPage);
+  if (gridCurrentPage > totalPages) gridCurrentPage = totalPages;
+  if (gridCurrentPage < 1) gridCurrentPage = 1;
+
+  const startIndex = (gridCurrentPage - 1) * gridItemsPerPage;
+  const paginatedBooks = filtered.slice(startIndex, startIndex + gridItemsPerPage);
+
+  if (gridPageInfo) gridPageInfo.textContent = `Page ${gridCurrentPage} of ${totalPages}`;
+  if (gridPrevBtn) gridPrevBtn.disabled = gridCurrentPage === 1;
+  if (gridNextBtn) gridNextBtn.disabled = gridCurrentPage === totalPages;
+
   const isAdmin = currentUserRole === "admin";
 
-  booksGrid.innerHTML = filtered.map(book => {
+  booksGrid.innerHTML = paginatedBooks.map(book => {
     const isAvailable = book.available > 0;
     const isBookmarked = studentBookmarkedMap.has(book.id);
+    const requestStatus = studentActiveBorrowedMap.get(book.id);
+    const activeBorrowRecordId = studentBorrowRecordMap.get(book.id) || "";
 
     return `
       <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col justify-between hover:shadow-md transition space-y-3">
@@ -375,25 +400,63 @@ function renderBooksCatalogGrid(books) {
               Preview
             </button>
             ${!isAdmin ? `
-              <div class="flex items-center gap-1">
-                <select id="duration-select-${book.id}" class="px-1.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-slate-50 font-semibold focus:outline-none">
-                  <option value="1">1d</option>
-                  <option value="3">3d</option>
-                  <option value="5">5d</option>
-                  <option value="7" selected>1 week</option>
-                  <option value="14">2 weeks</option>
-                  <option value="30">1 month</option>
-                </select>
-                <button onclick="handleBorrowAction('${book.id}', ${book.available})" class="px-3 py-1.5 rounded-lg font-semibold text-xs transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}" ${!isAvailable ? 'disabled' : ''}>
-                  Request
+              ${requestStatus === 'approved' ? `
+                <button onclick="handleReturnAction('${book.id}', '${activeBorrowRecordId}')" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition">
+                  Return
                 </button>
-              </div>
-            ` : ''}
+              ` : requestStatus === 'pending' ? `
+                <div class="flex items-center justify-center gap-1">
+                  <span class="px-2 py-1 text-[10px] font-semibold rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+                    <i class="fa-solid fa-clock mr-1"></i> Requested
+                  </span>
+                  <button onclick="handleCancelMyRequest('${activeBorrowRecordId}', '${book.id}')" class="px-2 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition" title="Cancel Request">
+                    <i class="fa-solid fa-xmark"></i> Cancel
+                  </button>
+                </div>
+              ` : `
+                <div class="flex items-center gap-1">
+                  <select id="duration-select-${book.id}" class="px-1.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-slate-50 font-semibold focus:outline-none">
+                    <option value="1">1d</option>
+                    <option value="3">3d</option>
+                    <option value="5">5d</option>
+                    <option value="7" selected>1 week</option>
+                    <option value="14">2 weeks</option>
+                    <option value="30">1 month</option>
+                  </select>
+                  <button onclick="handleBorrowAction('${book.id}', ${book.available})" class="px-3 py-1.5 rounded-lg font-semibold text-xs transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}" ${!isAvailable ? 'disabled' : ''}>
+                    Request
+                  </button>
+                </div>
+              `}
+            ` : `
+              <button onclick="populateEditForm('${book.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </button>
+            `}
           </div>
         </div>
       </div>
     `;
   }).join("");
+}
+
+if (gridPrevBtn) {
+  gridPrevBtn.addEventListener("click", () => {
+    if (gridCurrentPage > 1) {
+      gridCurrentPage--;
+      renderBooksCatalogGrid(allBooks);
+    }
+  });
+}
+
+if (gridNextBtn) {
+  gridNextBtn.addEventListener("click", () => {
+    const totalPages = Math.ceil(allBooks.length / gridItemsPerPage);
+    if (gridCurrentPage < totalPages) {
+      gridCurrentPage++;
+      renderBooksCatalogGrid(allBooks);
+    }
+  });
 }
 
 function populateGenreFilters(books) {
@@ -454,6 +517,7 @@ window.toggleGenreBooksList = (containerId, genreName) => {
 
 window.selectGenreQuickFilter = (genreName) => {
   selectedMainGenre = genreName;
+  gridCurrentPage = 1;
   if (genreCategorySelect) genreCategorySelect.value = genreName;
   if (quickPickDropdown) quickPickDropdown.value = genreName;
   renderBooksCatalogGrid(allBooks);
@@ -462,6 +526,7 @@ window.selectGenreQuickFilter = (genreName) => {
 if (genreCategorySelect) {
   genreCategorySelect.addEventListener("change", (e) => {
     selectedMainGenre = e.target.value;
+    gridCurrentPage = 1;
     if (quickPickDropdown) quickPickDropdown.value = e.target.value;
     renderBooksCatalogGrid(allBooks);
   });
@@ -469,12 +534,14 @@ if (genreCategorySelect) {
 
 if (subgenreSearchInput) {
   subgenreSearchInput.addEventListener("input", () => {
+    gridCurrentPage = 1;
     renderBooksCatalogGrid(allBooks);
   });
 }
 
 if (bookSearchInput) {
   bookSearchInput.addEventListener("input", () => {
+    gridCurrentPage = 1;
     renderBooksCatalogGrid(allBooks);
   });
 }
@@ -482,6 +549,7 @@ if (bookSearchInput) {
 if (resetGenreFilterBtn) {
   resetGenreFilterBtn.addEventListener("click", () => {
     selectedMainGenre = "ALL";
+    gridCurrentPage = 1;
     if (genreCategorySelect) genreCategorySelect.value = "ALL";
     if (quickPickDropdown) quickPickDropdown.value = "ALL";
     if (subgenreSearchInput) subgenreSearchInput.value = "";
