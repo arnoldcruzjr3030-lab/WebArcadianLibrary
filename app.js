@@ -55,6 +55,7 @@ const booksCollection = collection(db, "books");
 const usersCollection = collection(db, "users");
 const borrowedCollection = collection(db, "borrowed_books");
 const bookmarksCollection = collection(db, "bookmarks");
+const semestersCollection = collection(db, "semesters");
 
 // Page Identifier
 const path = window.location.pathname;
@@ -200,6 +201,7 @@ let cancelledStudentRecords = [];
 let userActiveRecords = [];
 let userBookmarkList = [];
 let userHistoryList = [];
+let allSemestersList = [];
 
 let studentActiveBorrowedMap = new Map();
 let studentBorrowRecordMap = new Map();
@@ -210,6 +212,8 @@ let unsubscribeBorrowedSnapshot = null;
 let unsubscribePendingSnapshot = null;
 let unsubscribeAllRecordsSnapshot = null;
 let unsubscribeBookmarksSnapshot = null;
+let unsubscribeSemestersSnapshot = null;
+
 let currentUserRole = "student";
 let currentUserApproved = false;
 let currentUserName = "";
@@ -238,7 +242,7 @@ let profileHistoryCurrentPage = 1;
 const profileHistoryItemsPerPage = 5;
 
 let gridCurrentPage = 1;
-const gridItemsPerPage = 6; // Shows 6 books per page on books.html
+const gridItemsPerPage = 6;
 
 const DAILY_FINE_RATE = 10;
 
@@ -298,6 +302,79 @@ function renderFallbackCoverHTML(title, category, extraClass = "w-12 h-16") {
   `;
 }
 
+// Real-Time Listener for Firestore Semesters Collection
+function listenToSemestersCollection() {
+  if (unsubscribeSemestersSnapshot) unsubscribeSemestersSnapshot();
+
+  unsubscribeSemestersSnapshot = onSnapshot(semestersCollection, (snapshot) => {
+    allSemestersList = [];
+    semesterDateMap.clear();
+    activeSemesterCode = "";
+
+    const filterSelect = document.getElementById("fine-semester-filter");
+    const configSelect = document.getElementById("config-sem-select");
+    const activeBadge = document.getElementById("active-sem-badge");
+
+    snapshot.forEach((docSnap) => {
+      const semData = { id: docSnap.id, ...docSnap.data() };
+      allSemestersList.push(semData);
+      
+      if (semData.startDate && semData.endDate) {
+        semesterDateMap.set(semData.code, { start: semData.startDate, end: semData.endDate });
+      }
+
+      if (semData.isActive) {
+        activeSemesterCode = semData.code;
+      }
+    });
+
+    if (configSelect) {
+      if (allSemestersList.length === 0) {
+        configSelect.innerHTML = `<option value="" disabled selected>No semesters added yet</option>`;
+      } else {
+        configSelect.innerHTML = allSemestersList.map(s => 
+          `<option value="${escapeHtml(s.code)}" ${s.code === activeSemesterCode ? 'selected' : ''}>${escapeHtml(s.name)}</option>`
+        ).join("");
+      }
+    }
+
+    if (filterSelect) {
+      const selectedFilter = filterSelect.value || "ALL";
+      filterSelect.innerHTML = `<option value="ALL">All Semesters</option>` + 
+        allSemestersList.map(s => `<option value="${escapeHtml(s.code)}">${escapeHtml(s.name)}</option>`).join("");
+      if (allSemestersList.some(s => s.code === selectedFilter)) {
+        filterSelect.value = selectedFilter;
+      } else {
+        filterSelect.value = "ALL";
+      }
+    }
+
+    const activeSemObj = allSemestersList.find(s => s.code === activeSemesterCode);
+    if (activeBadge) {
+      if (activeSemObj) {
+        activeBadge.textContent = `Active: ${activeSemObj.name}`;
+      } else {
+        activeBadge.textContent = "No Active Semester Selected";
+      }
+    }
+
+    if (configSelect && configSelect.value) {
+      const selectedSem = allSemestersList.find(s => s.code === configSelect.value);
+      const startDateInput = document.getElementById("sem-start-date");
+      const endDateInput = document.getElementById("sem-end-date");
+      if (selectedSem && startDateInput && endDateInput) {
+        startDateInput.value = selectedSem.startDate || "";
+        endDateInput.value = selectedSem.endDate || "";
+      }
+    }
+
+    renderAdminCalendar();
+    renderFinesTable();
+  }, (err) => {
+    console.error("Firestore Semesters Listener Error:", err);
+  });
+}
+
 // Dedicated Books Catalog Page Functions (books.html)
 function renderBooksCatalogGrid(books) {
   if (!booksGrid) return;
@@ -340,7 +417,6 @@ function renderBooksCatalogGrid(books) {
     return;
   }
 
-  // Calculate Pagination
   const totalPages = Math.ceil(filtered.length / gridItemsPerPage);
   if (gridCurrentPage > totalPages) gridCurrentPage = totalPages;
   if (gridCurrentPage < 1) gridCurrentPage = 1;
@@ -612,7 +688,8 @@ window.changeCalendarMonth = (offset) => {
   renderAdminCalendar();
 };
 
-window.handleSaveSemesterDates = () => {
+// Set Active Semester Dates & Save to Firestore
+window.handleSaveSemesterDates = async () => {
   const semSelect = document.getElementById("config-sem-select");
   const startDateInput = document.getElementById("sem-start-date");
   const endDateInput = document.getElementById("sem-end-date");
@@ -633,46 +710,28 @@ window.handleSaveSemesterDates = () => {
     return;
   }
 
-  activeSemesterCode = semCode;
-  semesterDateMap.set(semCode, { start: startVal, end: endVal });
+  try {
+    const updatePromises = allSemestersList.map(s => {
+      const docRef = doc(db, "semesters", s.id);
+      if (s.code === semCode) {
+        return updateDoc(docRef, {
+          startDate: startVal,
+          endDate: endVal,
+          isActive: true
+        });
+      } else {
+        return updateDoc(docRef, { isActive: false });
+      }
+    });
 
-  const activeBadge = document.getElementById("active-sem-badge");
-  if (activeBadge) {
-    const selectedOption = semSelect.options[semSelect.selectedIndex];
-    activeBadge.textContent = `Active: ${selectedOption ? selectedOption.textContent : semCode}`;
+    await Promise.all(updatePromises);
+    alert(`Semester dates updated! Active semester set to ${semCode} (${startVal} to ${endVal}).`);
+  } catch (err) {
+    alert("Failed to save active semester dates: " + err.message);
   }
-
-  alert(`Semester dates updated! Active semester set to ${semCode} (${startVal} to ${endVal}).`);
-  renderAdminCalendar();
 };
 
-function syncSemesterDropdowns(newSemCode, newSemName) {
-  const filterSelect = document.getElementById("fine-semester-filter");
-  const configSelect = document.getElementById("config-sem-select");
-
-  [filterSelect, configSelect].forEach(select => {
-    if (!select) return;
-
-    const dummyOpt = select.querySelector('option[value=""]');
-    if (dummyOpt) dummyOpt.remove();
-
-    let exists = false;
-    for (let option of select.options) {
-      if (option.value === newSemCode) {
-        exists = true;
-        break;
-      }
-    }
-    if (!exists) {
-      const opt = document.createElement("option");
-      opt.value = newSemCode;
-      opt.textContent = newSemName;
-      select.appendChild(opt);
-    }
-  });
-}
-
-window.handleAddNewSemesterPrompt = () => {
+window.handleAddNewSemesterPrompt = async () => {
   const semName = prompt("Enter new semester display label (e.g. 1st Sem AY 2026-2027):");
   if (!semName || !semName.trim()) return;
 
@@ -682,77 +741,79 @@ window.handleAddNewSemesterPrompt = () => {
   const trimmedName = semName.trim();
   const trimmedCode = semCode.trim();
 
-  syncSemesterDropdowns(trimmedCode, trimmedName);
-  activeSemesterCode = trimmedCode;
+  try {
+    const q = query(semestersCollection, where("code", "==", trimmedCode));
+    const querySnap = await getDocs(q);
+    if (!querySnap.empty) {
+      alert("A semester with this code already exists.");
+      return;
+    }
 
-  const activeBadge = document.getElementById("active-sem-badge");
-  if (activeBadge) activeBadge.textContent = `Active: ${trimmedName}`;
+    const resetPromises = allSemestersList.map(s => updateDoc(doc(db, "semesters", s.id), { isActive: false }));
+    await Promise.all(resetPromises);
 
-  alert(`Semester "${trimmedName}" added successfully!`);
+    await addDoc(semestersCollection, {
+      name: trimmedName,
+      code: trimmedCode,
+      startDate: "",
+      endDate: "",
+      isActive: true,
+      createdAt: new Date()
+    });
+
+    alert(`Semester "${trimmedName}" added successfully and set as active!`);
+  } catch (err) {
+    alert("Failed to add semester: " + err.message);
+  }
 };
 
-window.handleEditCurrentSemesterPrompt = () => {
+window.handleEditCurrentSemesterPrompt = async () => {
   const filterSelect = document.getElementById("fine-semester-filter");
   if (!filterSelect) return;
 
-  const selectedOption = filterSelect.options[filterSelect.selectedIndex];
-  if (!selectedOption || selectedOption.value === "ALL" || selectedOption.value === "") {
+  const selectedCode = filterSelect.value;
+  if (!selectedCode || selectedCode === "ALL") {
     alert("Please select a specific semester to edit.");
     return;
   }
 
-  const updatedName = prompt("Edit semester display label:", selectedOption.textContent);
+  const semDoc = allSemestersList.find(s => s.code === selectedCode);
+  if (!semDoc) {
+    alert("Semester record not found.");
+    return;
+  }
+
+  const updatedName = prompt("Edit semester display label:", semDoc.name);
   if (updatedName && updatedName.trim()) {
-    selectedOption.textContent = updatedName.trim();
-
-    const configSelect = document.getElementById("config-sem-select");
-    if (configSelect) {
-      for (let opt of configSelect.options) {
-        if (opt.value === selectedOption.value) {
-          opt.textContent = updatedName.trim();
-          break;
-        }
-      }
+    try {
+      await updateDoc(doc(db, "semesters", semDoc.id), { name: updatedName.trim() });
+      alert("Semester label updated successfully!");
+    } catch (err) {
+      alert("Failed to update semester label: " + err.message);
     }
-
-    alert("Semester label updated successfully!");
-    renderFinesTable();
   }
 };
 
-window.handleRemoveCurrentSemesterPrompt = () => {
+window.handleRemoveCurrentSemesterPrompt = async () => {
   const filterSelect = document.getElementById("fine-semester-filter");
   if (!filterSelect) return;
 
-  const selectedOption = filterSelect.options[filterSelect.selectedIndex];
-  if (!selectedOption || selectedOption.value === "ALL" || selectedOption.value === "") {
+  const selectedCode = filterSelect.value;
+  if (!selectedCode || selectedCode === "ALL") {
     alert("Please select a specific semester to remove.");
     return;
   }
 
-  if (confirm(`Are you sure you want to remove "${selectedOption.textContent}"?`)) {
-    const valToRemove = selectedOption.value;
-    filterSelect.remove(filterSelect.selectedIndex);
+  const semDoc = allSemestersList.find(s => s.code === selectedCode);
+  if (!semDoc) return;
 
-    const configSelect = document.getElementById("config-sem-select");
-    if (configSelect) {
-      for (let i = 0; i < configSelect.options.length; i++) {
-        if (configSelect.options[i].value === valToRemove) {
-          configSelect.remove(i);
-          break;
-        }
-      }
+  if (confirm(`Are you sure you want to remove "${semDoc.name}"?`)) {
+    try {
+      await deleteDoc(doc(db, "semesters", semDoc.id));
+      alert("Semester removed successfully.");
+    } catch (err) {
+      alert("Failed to remove semester: " + err.message);
     }
-
-    if (activeSemesterCode === valToRemove) {
-      activeSemesterCode = "";
-      const activeBadge = document.getElementById("active-sem-badge");
-      if (activeBadge) activeBadge.textContent = "No Active Semester Selected";
-    }
-
-    filterSelect.value = "ALL";
-    alert("Semester removed.");
-    renderFinesTable();
   }
 };
 
@@ -981,6 +1042,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 
   listenToBookCollection();
+  listenToSemestersCollection();
 });
 
 async function loadStudentProfileDetails(user) {
@@ -1065,7 +1127,6 @@ async function loadStudentProfileDetails(user) {
       if (data.status === 'pending') pending++;
     });
 
-    // Calculate active borrowed items count (excluding cancelled items)
     const activeBorrowedItems = userHistoryList.filter(log => log.status !== 'cancelled');
 
     if (statApprovedCount) statApprovedCount.textContent = approved;
@@ -1291,7 +1352,6 @@ if (myBookmarksNextBtn) {
 function renderProfileHistoryTable() {
   if (!profileHistoryTbody) return;
 
-  // Filter out cancelled requests from the Borrowed Books view
   const activeBorrowedList = userHistoryList.filter(log => log.status !== 'cancelled');
 
   if (activeBorrowedList.length === 0) {
@@ -1666,7 +1726,6 @@ function renderCategoryPills(books) {
     });
   }
 
-  // Category Manager List
   if (categoryManagerList) {
     if (uniqueGenres.length === 0) {
       categoryManagerList.innerHTML = `<p class="text-xs text-slate-400 italic">No custom categories found.</p>`;
@@ -1684,7 +1743,6 @@ function renderCategoryPills(books) {
     }
   }
 
-  // Sub-Category Manager List
   if (subCategoryManagerList) {
     if (uniqueSubGenres.length === 0) {
       subCategoryManagerList.innerHTML = `<p class="text-xs text-slate-400 italic">No custom sub-categories found.</p>`;
@@ -2490,8 +2548,6 @@ function listenToBookCollection() {
     renderCategoryPills(allBooks);
     renderTopBooks(allBooks);
     renderBookTable(allBooks);
-    
-    // Sync Dedicated Books Directory Page (books.html)
     populateGenreFilters(allBooks);
     renderBooksCatalogGrid(allBooks);
   }, (error) => {
@@ -2905,4 +2961,18 @@ if (searchInput) {
 
 document.addEventListener("DOMContentLoaded", () => {
   renderAdminCalendar();
+
+  const configSemSelect = document.getElementById("config-sem-select");
+  if (configSemSelect) {
+    configSemSelect.addEventListener("change", (e) => {
+      const selectedCode = e.target.value;
+      const selectedSem = allSemestersList.find(s => s.code === selectedCode);
+      const startDateInput = document.getElementById("sem-start-date");
+      const endDateInput = document.getElementById("sem-end-date");
+      if (selectedSem && startDateInput && endDateInput) {
+        startDateInput.value = selectedSem.startDate || "";
+        endDateInput.value = selectedSem.endDate || "";
+      }
+    });
+  }
 });
