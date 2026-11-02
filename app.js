@@ -1065,10 +1065,13 @@ async function loadStudentProfileDetails(user) {
       if (data.status === 'pending') pending++;
     });
 
+    // Calculate active borrowed items count (excluding cancelled items)
+    const activeBorrowedItems = userHistoryList.filter(log => log.status !== 'cancelled');
+
     if (statApprovedCount) statApprovedCount.textContent = approved;
     if (statPendingCount) statPendingCount.textContent = pending;
-    if (statTotalCount) statTotalCount.textContent = userHistoryList.length;
-    if (historyCountBadge) historyCountBadge.textContent = `${userHistoryList.length} Items`;
+    if (statTotalCount) statTotalCount.textContent = activeBorrowedItems.length;
+    if (historyCountBadge) historyCountBadge.textContent = `${activeBorrowedItems.length} Items`;
 
     renderProfileHistoryTable();
   });
@@ -1288,18 +1291,21 @@ if (myBookmarksNextBtn) {
 function renderProfileHistoryTable() {
   if (!profileHistoryTbody) return;
 
-  if (userHistoryList.length === 0) {
-    profileHistoryTbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400 font-medium">No borrowing history found.</td></tr>`;
+  // Filter out cancelled requests from the Borrowed Books view
+  const activeBorrowedList = userHistoryList.filter(log => log.status !== 'cancelled');
+
+  if (activeBorrowedList.length === 0) {
+    profileHistoryTbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400 font-medium">No borrowed books or active requests found.</td></tr>`;
     if (profileHistoryPageInfo) profileHistoryPageInfo.textContent = "Page 0 of 0";
     return;
   }
 
-  const totalPages = Math.ceil(userHistoryList.length / profileHistoryItemsPerPage);
+  const totalPages = Math.ceil(activeBorrowedList.length / profileHistoryItemsPerPage);
   if (profileHistoryCurrentPage > totalPages) profileHistoryCurrentPage = totalPages;
   if (profileHistoryCurrentPage < 1) profileHistoryCurrentPage = 1;
 
   const startIndex = (profileHistoryCurrentPage - 1) * profileHistoryItemsPerPage;
-  const pageItems = userHistoryList.slice(startIndex, startIndex + profileHistoryItemsPerPage);
+  const pageItems = activeBorrowedList.slice(startIndex, startIndex + profileHistoryItemsPerPage);
 
   if (profileHistoryPageInfo) profileHistoryPageInfo.textContent = `Page ${profileHistoryCurrentPage} of ${totalPages}`;
   if (profileHistoryPrevBtn) profileHistoryPrevBtn.disabled = profileHistoryCurrentPage === 1;
@@ -1321,8 +1327,6 @@ function renderProfileHistoryTable() {
       }
     } else if (log.status === 'declined') {
       statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800">Declined</span>`;
-    } else if (log.status === 'cancelled') {
-      statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700">Cancelled</span>`;
     } else if (log.status === 'returned') {
       statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700">Returned</span>`;
     }
@@ -1334,6 +1338,11 @@ function renderProfileHistoryTable() {
         <td class="py-3 px-3 text-center text-slate-500 font-medium">${reqDate}</td>
         <td class="py-3 px-4 text-center font-bold ${fineDetails.isOverdue ? 'text-red-600' : 'text-slate-700'}">
           ${dueDateObj ? dueDateObj.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }) : '-'}
+        </td>
+        <td class="py-3 px-4 text-center">
+          <button onclick="handleDismissRecord('${log.id}')" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 transition">
+            Dismiss
+          </button>
         </td>
       </tr>
     `;
@@ -1351,7 +1360,8 @@ if (profileHistoryPrevBtn) {
 
 if (profileHistoryNextBtn) {
   profileHistoryNextBtn.addEventListener("click", () => {
-    const totalPages = Math.ceil(userHistoryList.length / profileHistoryItemsPerPage);
+    const activeBorrowedList = userHistoryList.filter(log => log.status !== 'cancelled');
+    const totalPages = Math.ceil(activeBorrowedList.length / profileHistoryItemsPerPage);
     if (profileHistoryCurrentPage < totalPages) {
       profileHistoryCurrentPage++;
       renderProfileHistoryTable();
