@@ -375,9 +375,19 @@ function renderBooksCatalogGrid(books) {
               Preview
             </button>
             ${!isAdmin ? `
-              <button onclick="handleBorrowAction('${book.id}', ${book.available})" class="px-3 py-1.5 rounded-lg font-semibold text-xs transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}" ${!isAvailable ? 'disabled' : ''}>
-                Request
-              </button>
+              <div class="flex items-center gap-1">
+                <select id="duration-select-${book.id}" class="px-1.5 py-1.5 border border-slate-200 rounded-lg text-xs bg-slate-50 font-semibold focus:outline-none">
+                  <option value="1">1d</option>
+                  <option value="3">3d</option>
+                  <option value="5">5d</option>
+                  <option value="7" selected>1 week</option>
+                  <option value="14">2 weeks</option>
+                  <option value="30">1 month</option>
+                </select>
+                <button onclick="handleBorrowAction('${book.id}', ${book.available})" class="px-3 py-1.5 rounded-lg font-semibold text-xs transition ${isAvailable ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'}" ${!isAvailable ? 'disabled' : ''}>
+                  Request
+                </button>
+              </div>
             ` : ''}
           </div>
         </div>
@@ -1871,7 +1881,7 @@ if (isLoginPage) {
         authSubtitle.textContent = "Sign in to access Arcadian Library Portal";
         authSubmitBtn.textContent = "Sign In";
         toggleAuthModeBtn.textContent = "Don't have an account? Sign Up";
-        if (signupFieldsContainer) signupFieldsContainer.classList.add("hidden");
+        if (signupFieldsContainer) signupFieldsContainer.add("hidden");
         if (studentIdContainer) studentIdContainer.classList.add("hidden");
       }
     });
