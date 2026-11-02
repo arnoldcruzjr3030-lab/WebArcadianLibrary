@@ -234,6 +234,15 @@ const profileHistoryItemsPerPage = 5;
 
 const DAILY_FINE_RATE = 10;
 
+function formatDurationLabel(days) {
+  const d = parseInt(days, 10);
+  if (d === 1) return "1 Day";
+  if (d === 7) return "1 Week";
+  if (d === 14) return "2 Weeks";
+  if (d === 30) return "1 Month";
+  return `${d} Days`;
+}
+
 function calculateOverdueFine(dueDateObj) {
   if (!dueDateObj) return { isOverdue: false, daysLate: 0, fineAmount: 0 };
   const today = new Date();
@@ -1064,7 +1073,7 @@ function renderMyBorrowedTable() {
         </td>
         <td class="py-3 px-4 text-center">${statusBadge}</td>
         <td class="py-3 px-4 text-center">
-          ${dueDateObj ? `<span class="font-bold ${fineDetails.isOverdue ? 'text-red-600' : 'text-slate-800'}">${dueDateObj.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' })}</span><div class="text-[10px] text-slate-400 font-medium">Duration: ${item.durationDays || 7} Days</div>` : `<span class="text-slate-400 italic">Awaiting Approval (${item.durationDays || 7} days requested)</span>`}
+          ${dueDateObj ? `<span class="font-bold ${fineDetails.isOverdue ? 'text-red-600' : 'text-slate-800'}">${dueDateObj.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' })}</span><div class="text-[10px] text-slate-400 font-medium">Duration: ${formatDurationLabel(item.durationDays || 7)}</div>` : `<span class="text-slate-400 italic">Awaiting Approval (${formatDurationLabel(item.durationDays || 7)} requested)</span>`}
         </td>
         <td class="py-3 px-4 text-center">
           ${item.status === 'approved' ? `
@@ -2335,7 +2344,7 @@ function listenToPendingBorrowRequests() {
           </td>
           <td class="py-3 px-2 sm:px-3 text-center text-slate-600 font-medium">
             <div>${reqDate}</div>
-            <span class="inline-block mt-0.5 px-2 py-0.5 text-[10px] bg-indigo-50 text-indigo-700 font-bold rounded-md">Requested: ${duration} Days</span>
+            <span class="inline-block mt-0.5 px-2 py-0.5 text-[10px] bg-indigo-50 text-indigo-700 font-bold rounded-md">Requested: ${formatDurationLabel(duration)}</span>
           </td>
           <td class="py-3 px-3 sm:px-4 text-center">
             <div class="flex flex-col sm:flex-row justify-center items-center gap-1.5">
@@ -2495,10 +2504,12 @@ function renderBookTable(books) {
               ` : `
                 <div class="flex items-center justify-center gap-1">
                   <select id="duration-select-${book.id}" class="px-1.5 py-1 border border-slate-200 rounded-lg text-[11px] bg-slate-50 font-semibold focus:outline-none">
+                    <option value="1">1d</option>
                     <option value="3">3d</option>
                     <option value="5">5d</option>
-                    <option value="7" selected>7d</option>
-                    <option value="14">14d</option>
+                    <option value="7" selected>1 week</option>
+                    <option value="14">2 weeks</option>
+                    <option value="30">1 month</option>
                   </select>
                   <button onclick="handleBorrowAction('${book.id}', ${book.available})" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow transition ${book.available <= 0 ? 'opacity-40 cursor-not-allowed' : ''}" ${book.available <= 0 ? 'disabled' : ''}>Borrow</button>
                 </div>
@@ -2698,7 +2709,7 @@ window.handleBorrowAction = async (bookId, currentAvailable) => {
       semester: activeSemesterCode || "UNASSIGNED"
     });
 
-    alert(`Borrow request submitted for ${requestedDays} days! Waiting for Admin approval.`);
+    alert(`Borrow request submitted for ${formatDurationLabel(requestedDays)}! Waiting for Admin approval.`);
   } catch (err) {
     console.error("Request failed:", err);
   }
