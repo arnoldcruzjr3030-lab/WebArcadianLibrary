@@ -105,6 +105,10 @@
         <i class="fa-solid fa-list-check"></i> Borrow Records
         <span id="records-count-badge" class="bg-slate-700 text-slate-200 font-bold text-[10px] px-2 py-0.5 rounded-full">0 Records</span>
       </button>
+      <button id="tab-btn-returned" class="admin-tab-btn bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-xs font-semibold flex-shrink-0">
+        <i class="fa-solid fa-rotate-left"></i> Returned Books
+        <span id="returned-count-badge" class="bg-emerald-600 text-white font-bold text-[10px] px-2 py-0.5 rounded-full">0 Returned</span>
+      </button>
       <button id="tab-btn-fines" class="admin-tab-btn bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-xs font-semibold flex-shrink-0">
         <i class="fa-solid fa-hand-holding-dollar"></i> Fines & Payments
       </button>
@@ -337,7 +341,7 @@
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div>
           <h3 class="font-bold text-sm sm:text-base text-slate-900">Active & Borrowing Records</h3>
-          <p class="text-xs text-slate-400">Monitor loans and transaction history with full student names</p>
+          <p class="text-xs text-slate-400">Monitor active loans and borrow transactions (Pending & Approved)</p>
         </div>
         <button onclick="exportBorrowingRecordsToCSV()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5 self-start sm:self-auto min-h-[40px]">
           <i class="fa-solid fa-file-csv"></i> Export CSV
@@ -381,7 +385,46 @@
       </div>
     </div>
 
-    <!-- PAGE 4: FINES & PAYMENTS -->
+    <!-- PAGE 4: RETURNED BOOKS LOGS -->
+    <div id="page-returned" class="hidden bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-6">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+        <div>
+          <h3 class="font-bold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-rotate-left text-emerald-600"></i> Returned Books Log
+          </h3>
+          <p class="text-xs text-slate-400">Historical records of all books returned by students</p>
+        </div>
+        <span id="returned-total-badge" class="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-extrabold rounded-full border border-emerald-100">
+          0 Total Returned
+        </span>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-slate-100">
+        <table class="w-full min-w-[620px] text-left border-collapse">
+          <thead>
+            <tr class="border-b border-slate-200 text-[11px] font-extrabold uppercase text-slate-400 bg-slate-50/50">
+              <th class="py-3 px-4">Student Details</th>
+              <th class="py-3 px-4">Book Title</th>
+              <th class="py-3 px-3 text-center">Returned Date</th>
+              <th class="py-3 px-3 text-center">Fine Status</th>
+              <th class="py-3 px-4 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="returned-books-tbody" class="divide-y divide-slate-100 text-xs font-medium"></tbody>
+        </table>
+      </div>
+
+      <!-- RETURNED BOOKS PAGINATION CONTROLS -->
+      <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+        <span id="returned-page-info" class="text-slate-400 font-semibold">Page 1 of 1</span>
+        <div class="flex items-center gap-2">
+          <button id="returned-prev-btn" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 font-bold transition">Prev</button>
+          <button id="returned-next-btn" class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 font-bold transition">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 5: FINES & PAYMENTS -->
     <div id="page-fines" class="hidden space-y-5 sm:space-y-6">
 
       <!-- Semester Academic Calendar & Date Config Card -->
@@ -525,7 +568,7 @@
 
     </div>
 
-    <!-- PAGE 5: STUDENT DIRECTORY -->
+    <!-- PAGE 6: STUDENT DIRECTORY -->
     <div id="page-students" class="hidden bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-sm">
       <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
         <div>
