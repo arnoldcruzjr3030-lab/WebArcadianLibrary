@@ -120,6 +120,9 @@ const pendingRequestsTbody = document.getElementById("pending-requests-tbody");
 const cancelledRequestsTbody = document.getElementById("cancelled-requests-tbody");
 const pendingRequestBadge = document.getElementById("pending-request-count-badge");
 const allRecordsTbody = document.getElementById("all-records-tbody");
+const returnedBooksTbody = document.getElementById("returned-books-tbody");
+const returnedCountBadge = document.getElementById("returned-count-badge");
+const returnedTotalBadge = document.getElementById("returned-total-badge");
 const finesRecordsTbody = document.getElementById("fines-records-tbody");
 const recordsCountBadge = document.getElementById("records-count-badge");
 const myBorrowedTbody = document.getElementById("my-borrowed-books-tbody");
@@ -139,6 +142,10 @@ const catalogPageInfo = document.getElementById("catalog-page-info");
 const recordsPrevBtn = document.getElementById("records-prev-btn");
 const recordsNextBtn = document.getElementById("records-next-btn");
 const recordsPageInfo = document.getElementById("records-page-info");
+
+const returnedPrevBtn = document.getElementById("returned-prev-btn");
+const returnedNextBtn = document.getElementById("returned-next-btn");
+const returnedPageInfo = document.getElementById("returned-page-info");
 
 // DOM Elements for Dedicated Books Directory Page (books.html)
 const booksGrid = document.getElementById("books-grid");
@@ -197,6 +204,7 @@ const profileHistoryPageInfo = document.getElementById("profile-history-page-inf
 
 let allBooks = [];
 let activeStudentRecords = [];
+let returnedStudentRecords = [];
 let cancelledStudentRecords = [];
 let userActiveRecords = [];
 let userBookmarkList = [];
@@ -231,6 +239,9 @@ const catalogItemsPerPage = 5;
 
 let recordsCurrentPage = 1;
 const recordsItemsPerPage = 5;
+
+let returnedCurrentPage = 1;
+const returnedItemsPerPage = 5;
 
 let myBorrowCurrentPage = 1;
 const myBorrowItemsPerPage = 5;
@@ -1477,6 +1488,38 @@ async function loadRegisteredStudents() {
   }
 }
 
+function listenToAllStudentRecords() {
+  if (unsubscribeAllRecordsSnapshot) unsubscribeAllRecordsSnapshot();
+
+  unsubscribeAllRecordsSnapshot = onSnapshot(borrowedCollection, (snapshot) => {
+    activeStudentRecords = [];
+    returnedStudentRecords = [];
+    cancelledStudentRecords = [];
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const record = { id: docSnap.id, ...data };
+
+      if (data.status === "cancelled") {
+        cancelledStudentRecords.push(record);
+      } else if (data.status === "returned") {
+        returnedStudentRecords.push(record);
+      } else {
+        activeStudentRecords.push(record);
+      }
+    });
+
+    if (recordsCountBadge) recordsCountBadge.textContent = `${activeStudentRecords.length} Records`;
+    if (returnedCountBadge) returnedCountBadge.textContent = `${returnedStudentRecords.length} Returned`;
+    if (returnedTotalBadge) returnedTotalBadge.textContent = `${returnedStudentRecords.length} Total Returned`;
+
+    renderStudentRecordsTable();
+    renderReturnedBooksTable();
+    renderCancelledRequestsTable();
+    renderFinesTable();
+  });
+}
+
 function renderStudentRecordsTable() {
   if (!allRecordsTbody) return;
 
@@ -1515,8 +1558,6 @@ function renderStudentRecordsTable() {
       }
     } else if (rec.status === 'declined') {
       statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-red-100 text-red-800">Declined</span>`;
-    } else if (rec.status === 'returned') {
-      statusBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700">Returned</span>`;
     }
 
     return `
@@ -1560,6 +1601,75 @@ if (recordsNextBtn) {
     if (recordsCurrentPage < totalPages) {
       recordsCurrentPage++;
       renderStudentRecordsTable();
+    }
+  });
+}
+
+function renderReturnedBooksTable() {
+  if (!returnedBooksTbody) return;
+
+  if (returnedStudentRecords.length === 0) {
+    returnedBooksTbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400 font-medium">No returned book records found.</td></tr>`;
+    if (returnedPageInfo) returnedPageInfo.textContent = "Page 0 of 0";
+    if (returnedPrevBtn) returnedPrevBtn.disabled = true;
+    if (returnedNextBtn) returnedNextBtn.disabled = true;
+    return;
+  }
+
+  const totalPages = Math.ceil(returnedStudentRecords.length / returnedItemsPerPage);
+  if (returnedCurrentPage > totalPages) returnedCurrentPage = totalPages;
+  if (returnedCurrentPage < 1) returnedCurrentPage = 1;
+
+  const startIndex = (returnedCurrentPage - 1) * returnedItemsPerPage;
+  const pageItems = returnedStudentRecords.slice(startIndex, startIndex + returnedItemsPerPage);
+
+  if (returnedPageInfo) returnedPageInfo.textContent = `Page ${returnedCurrentPage} of ${totalPages}`;
+  if (returnedPrevBtn) returnedPrevBtn.disabled = returnedCurrentPage === 1;
+  if (returnedNextBtn) returnedNextBtn.disabled = returnedCurrentPage === totalPages;
+
+  returnedBooksTbody.innerHTML = pageItems.map((rec) => {
+    const returnedDateObj = rec.returnedAt ? new Date(rec.returnedAt.seconds * 1000) : null;
+    const returnedDateStr = returnedDateObj ? returnedDateObj.toLocaleDateString("en-US", { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+    
+    let fineBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-slate-100 text-slate-700 border border-slate-200">No Fine</span>`;
+    if (rec.finePaid) {
+      fineBadge = `<span class="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200"><i class="fa-solid fa-check-double mr-1"></i> Paid (₱${(rec.fineAmountPaid || 0).toFixed(2)})</span>`;
+    }
+
+    return `
+      <tr class="hover:bg-slate-50 transition border-b border-slate-100 sm:border-0">
+        <td class="py-3 px-3 sm:px-4">
+          <div class="font-bold text-indigo-900">ID: ${escapeHtml(rec.studentId || 'N/A')}</div>
+          <div class="text-xs font-semibold text-slate-800">${escapeHtml(rec.userEmail)}</div>
+        </td>
+        <td class="py-3 px-3 sm:px-4 font-bold text-slate-900">${escapeHtml(rec.bookTitle)}</td>
+        <td class="py-3 px-2 sm:px-3 text-center font-semibold text-slate-700">${returnedDateStr}</td>
+        <td class="py-3 px-2 sm:px-3 text-center">${fineBadge}</td>
+        <td class="py-3 px-3 sm:px-4 text-center">
+          <button onclick="handleRemoveBorrowRecord('${rec.id}')" class="px-2 py-1 text-xs font-semibold rounded-lg bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition">
+            <i class="fa-solid fa-trash-can"></i> Remove Log
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+if (returnedPrevBtn) {
+  returnedPrevBtn.addEventListener("click", () => {
+    if (returnedCurrentPage > 1) {
+      returnedCurrentPage--;
+      renderReturnedBooksTable();
+    }
+  });
+}
+
+if (returnedNextBtn) {
+  returnedNextBtn.addEventListener("click", () => {
+    const totalPages = Math.ceil(returnedStudentRecords.length / returnedItemsPerPage);
+    if (returnedCurrentPage < totalPages) {
+      returnedCurrentPage++;
+      renderReturnedBooksTable();
     }
   });
 }
@@ -1680,7 +1790,7 @@ if (togglePasswordVisibilityBtn && authPassword && passwordEyeIcon) {
 }
 
 function switchAdminTab(targetTab) {
-  const tabs = ["catalog", "pending", "borrowing", "fines", "students"];
+  const tabs = ["catalog", "pending", "borrowing", "returned", "fines", "students"];
 
   tabs.forEach(tab => {
     const page = document.getElementById(`page-${tab}`);
@@ -1697,7 +1807,7 @@ function switchAdminTab(targetTab) {
   if (activeBtn) activeBtn.className = "admin-tab-btn active bg-indigo-600 text-white px-3 sm:px-4 py-2 rounded-xl transition flex items-center gap-2 whitespace-nowrap text-[11px] sm:text-xs";
 }
 
-["catalog", "pending", "borrowing", "fines", "students"].forEach(tab => {
+["catalog", "pending", "borrowing", "returned", "fines", "students"].forEach(tab => {
   document.getElementById(`tab-btn-${tab}`)?.addEventListener("click", () => switchAdminTab(tab));
 });
 
@@ -2117,32 +2227,6 @@ if (logoutBtn) {
   });
 }
 
-function listenToAllStudentRecords() {
-  if (unsubscribeAllRecordsSnapshot) unsubscribeAllRecordsSnapshot();
-
-  unsubscribeAllRecordsSnapshot = onSnapshot(borrowedCollection, (snapshot) => {
-    activeStudentRecords = [];
-    cancelledStudentRecords = [];
-
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      const record = { id: docSnap.id, ...data };
-
-      if (data.status === "cancelled") {
-        cancelledStudentRecords.push(record);
-      } else {
-        activeStudentRecords.push(record);
-      }
-    });
-
-    if (recordsCountBadge) recordsCountBadge.textContent = `${activeStudentRecords.length} Records`;
-
-    renderStudentRecordsTable();
-    renderCancelledRequestsTable();
-    renderFinesTable();
-  });
-}
-
 function renderCancelledRequestsTable() {
   if (!cancelledRequestsTbody) return;
 
@@ -2203,7 +2287,9 @@ function renderFinesTable() {
   let totalCollected = 0;
   let fineRowsHtml = '';
 
-  activeStudentRecords.forEach((rec) => {
+  const allRecordsList = [...activeStudentRecords, ...returnedStudentRecords];
+
+  allRecordsList.forEach((rec) => {
     const dueDateObj = rec.dueDate ? new Date(rec.dueDate.seconds * 1000) : null;
     const fineDetails = calculateOverdueFine(dueDateObj);
 
@@ -2345,7 +2431,9 @@ window.handlePrintFineReceipt = (studentId, userEmail, bookTitle, fineAmount) =>
 };
 
 window.exportFinesToCSV = () => {
-  if (activeStudentRecords.length === 0) {
+  const allRecordsList = [...activeStudentRecords, ...returnedStudentRecords];
+
+  if (allRecordsList.length === 0) {
     alert("No fine records available to export.");
     return;
   }
@@ -2353,7 +2441,7 @@ window.exportFinesToCSV = () => {
   const headers = ["Student ID", "Student Email", "Book Title", "Days Overdue", "Fine Amount (PHP)", "Payment Status", "Payment Channel"];
   const csvRows = [headers.join(",")];
 
-  activeStudentRecords.forEach((rec) => {
+  allRecordsList.forEach((rec) => {
     const dueDateObj = rec.dueDate ? new Date(rec.dueDate.seconds * 1000) : null;
     const fineDetails = calculateOverdueFine(dueDateObj);
 
